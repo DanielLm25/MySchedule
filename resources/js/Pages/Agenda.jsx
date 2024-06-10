@@ -15,8 +15,6 @@ export default function Agenda() {
   const [events, setEvents] = useState([]);
   const [eventToEdit, setEventToEdit] = useState(null);
   const [error, setError] = useState(null);
-  const [calendarView, setCalendarView] = useState('dayGridMonth'); // Estado para controlar a visualização do calendário
-
 
   useEffect(() => {
     fetchEvents();
@@ -39,9 +37,18 @@ export default function Agenda() {
   };
 
   const handleDateClick = (info) => {
-    setSelectedDate(info.dateStr);
+    const clickedDate = info.date; // Use info.date em vez de info.dateStr
+    setSelectedDate(clickedDate);
     setIsInitialModalOpen(true);
+    console.log('Data selecionada:', clickedDate);
+
+    // Adicione um log específico para o dia da semana selecionado
+    const dayOfWeek = clickedDate.getDay();
+    const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    console.log('Dia da semana selecionado:', dayOfWeekNames[dayOfWeek]);
   };
+
+
 
   const handleCloseModals = () => {
     setIsInitialModalOpen(false);
@@ -58,24 +65,17 @@ export default function Agenda() {
 
   const handleEditEventClick = (event) => {
     setEventToEdit(event);
+    setSelectedDate(event.start);
     setIsInitialModalOpen(false);
     setIsEditEventModalOpen(true);
   };
 
   const handleEditEvent = async (updatedEvent) => {
     try {
-      const formattedTime = updatedEvent.time.split(':').slice(0, 2).join(':');
+      const formattedTime = updatedEvent.time.substring(0, 5); // Formata a hora para 'HH:mm'
+      updatedEvent.time = formattedTime; // Atualiza a hora no evento atualizado
 
-      const formattedEvent = {
-        id: updatedEvent.id,
-        title: updatedEvent.title,
-        start: updatedEvent.date,
-        description: updatedEvent.description,
-        time: formattedTime,
-        date: updatedEvent.date,
-      };
-
-      const response = await axios.put(`/events/${updatedEvent.id}`, formattedEvent);
+      const response = await axios.put(`/events/${updatedEvent.id}`, updatedEvent);
       const editedEvent = response.data;
 
       const updatedEvents = events.map(event => (event.id === editedEvent.id ? editedEvent : event));
@@ -89,6 +89,8 @@ export default function Agenda() {
     }
   };
 
+
+
   const handleAddEvent = async (newEvent) => {
     try {
       const response = await axios.post('/events', newEvent);
@@ -99,15 +101,23 @@ export default function Agenda() {
         start: addedEvent.date,
         description: addedEvent.description,
         time: addedEvent.time,
+        color: addedEvent.color,
+        recurrence: addedEvent.recurrence,
+        days_of_week: addedEvent.daysOfWeek // Adicione days_of_week
       };
-      const updatedEvents = [...events, formattedEvent];
-      setEvents(updatedEvents);
-      saveEventsToLocalStorage(updatedEvents);
+      const updatedEvents = [...events, formattedEvent]; // Adiciona o novo evento ao array de eventos existentes
+      console.log('Novo evento formatado:', formattedEvent);
+      console.log('Eventos atualizados antes de setEvents:', updatedEvents);
+      setEvents(updatedEvents); // Atualiza o estado local de eventos
+      saveEventsToLocalStorage(updatedEvents); // Salva os eventos atualizados no armazenamento local
       handleCloseModals();
+      fetchEvents(); // Você precisa recuperar os eventos atualizados após adicionar um novo evento
     } catch (error) {
       console.error('Error adding event:', error);
     }
   };
+
+
 
   const handleDeleteEvent = async (eventId) => {
     try {
@@ -115,18 +125,42 @@ export default function Agenda() {
       const updatedEvents = events.filter(event => event.id !== eventId);
       setEvents(updatedEvents);
       saveEventsToLocalStorage(updatedEvents);
+
     } catch (error) {
       console.error('Error deleting event:', error);
     }
   };
 
   const getEventsForSelectedDate = () => {
-    return events.filter(event => event.start === selectedDate);
+    const selectedDateObj = new Date(selectedDate);
+    const selectedDayOfWeek = selectedDateObj.getDay();
+    const daysOfWeekOrdered = [1, 2, 3, 4, 5, 6, 0]; // Segunda a Domingo
+
+    const filteredEvents = events.filter(event => {
+      const eventDate = new Date(event.date);
+      const eventDayOfWeek = eventDate.getDay();
+
+      const isSameDate = selectedDateObj.toDateString() === eventDate.toDateString();
+
+      if (isSameDate) {
+        return true;
+      }
+
+      if (
+        event.recurrence === 'weekly' &&
+        event.days_of_week &&
+        event.days_of_week.includes(daysOfWeekOrdered[selectedDayOfWeek])
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    return filteredEvents;
   };
 
-  const handleViewChange = (view) => {
-    setCalendarView(view);
-  };
+
   return (
     <div>
       <nav className="bg-gray-800">
@@ -165,8 +199,16 @@ export default function Agenda() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay',
           }}
           dateClick={handleDateClick}
-          events={events}
+          events={events.map(event => ({
+            ...event,
+            daysOfWeek: event.recurrence === 'weekly' ? event.days_of_week : undefined,
+            startRecur: event.recurrence === 'daily' ? event.date : undefined,
+            endRecur: event.recurrence === 'daily' ? event.endDate : undefined,
+          }))}
+          editable={true}
+          selectable={true}
         />
+
       </div>
 
       <Modal
@@ -179,20 +221,24 @@ export default function Agenda() {
         selectedDate={selectedDate}
         onAddEvent={handleAddEventClick}
       >
-        <h2 className="text-lg font-semibold mb-4">Events for {selectedDate}</h2>
-        {getEventsForSelectedDate().length > 0 ? (
-          getEventsForSelectedDate().map(event => (
-            <div key={event.id} className="mb-2">
-              <p><strong>{event.title}</strong></p>
-              <p>{event.description}</p>
-              <button onClick={() => handleEditEventClick(event)}>Edit</button>
-              <button onClick={() => handleDeleteEvent(event.id)}>Delete</button>
+        <h2 className="text-lg font-semibold mb-4">Events for {new Date(selectedDate).toDateString()}</h2>
+        {getEventsForSelectedDate().map(event => (
+          event.id && (
+            <div key={event.id} className="mb-2 flex justify-between items-center">
+              <div>
+                <p><strong>{event.title}</strong></p>
+                <p>{event.description}</p>
+              </div>
+              <div>
+                <button className="px-2 py-1 bg-yellow-500 text-white rounded mr-2" onClick={() => handleEditEventClick(event)}>Edit</button>
+                <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={() => handleDeleteEvent(event.id)}>Delete</button>
+              </div>
             </div>
-          ))
-        ) : (
-          <p>No events for this date.</p>
-        )}
+          )
+        ))}
+
       </Modal>
+
 
       <Modal
         show={isAddEventModalOpen}
@@ -201,9 +247,12 @@ export default function Agenda() {
         type="add"
         selectedDate={selectedDate}
         onAddEvent={handleAddEvent}
+        setIsModalOpen={setIsAddEventModalOpen}
       >
         <h2 className="text-lg font-semibold mb-4">Add Event</h2>
       </Modal>
+
+
 
       <Modal
         show={isEditEventModalOpen}
@@ -212,8 +261,6 @@ export default function Agenda() {
         type="edit"
         onEditEvent={handleEditEvent}
         eventToEdit={eventToEdit}
-        selectedDate={selectedDate}
-        onDeleteEvent={handleDeleteEvent}
       >
         <h2 className="text-lg font-semibold mb-4">Edit Event</h2>
       </Modal>

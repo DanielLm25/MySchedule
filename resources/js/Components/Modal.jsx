@@ -12,70 +12,116 @@ export default function Modal({
     onDeleteEvent = () => { },
     eventToEdit = null,
     selectedDate,
-    onAddEvent
+    onAddEvent,
+    labelColors, // Recebendo labelColors como prop
 }) {
     const [newEvent, setNewEvent] = useState({
         title: '',
         description: '',
         time: '',
-        date: selectedDate || ''
+        date: selectedDate || '', // Usando selectedDate como valor padrão
+        label: '',
+        recurrence: '',
+        days_of_week: '' // Adicione o campo para armazenar a etiqueta selecionada
     });
     const [eventsForSelectedDate, setEventsForSelectedDate] = useState([]);
-    const labelColors = {
-        personal: '#FFD700', // Amarelo
-        work: '#4169E1',     // Azul
-        school: '#32CD32',   // Verde
-        // Adicione outras etiquetas e suas cores conforme necessário
+    const [selectedColor, setSelectedColor] = useState('#378006');
+    const handleColorChange = (color) => {
+        setSelectedColor(color);
     };
+    const [selectedRecurrence, setSelectedRecurrence] = useState('none');
+    const [daysOfWeek, setDaysOfWeek] = useState([]);
+
+    const handleDaysOfWeekChange = (e) => {
+        const value = parseInt(e.target.value);
+        setDaysOfWeek(prevState =>
+            e.target.checked ? [...prevState, value] : prevState.filter(day => day !== value)
+        );
+    };
+
 
     useEffect(() => {
         if (type === 'edit' && eventToEdit) {
-            // Se o tipo for 'edit' e houver um evento para editar, preencha os dados do evento no estado
+            const [date, time] = eventToEdit.start ? eventToEdit.start.split('T') : ['', ''];
             setNewEvent({
                 id: eventToEdit.id,
                 title: eventToEdit.title || '',
                 description: eventToEdit.description || '',
-                time: eventToEdit.time, // Mantenha o mesmo formato do tempo recuperado
-                date: eventToEdit.date
+                time: eventToEdit.time || '00:00', // Valor padrão para o tempo
+                date: eventToEdit.date || new Date().toISOString().split('T')[0], // Valor padrão para a data
+                color: eventToEdit.color || '#378006' // Valor padrão para a cor
             });
-
-            // Log dos dados recuperados
-            console.log('Dados recuperados do evento:', {
-                id: eventToEdit.id,
-                title: eventToEdit.title || '',
-                description: eventToEdit.description || '',
-                time: eventToEdit.time,
-                date: eventToEdit.date
-            });
+            setSelectedColor(eventToEdit.color || '#378006'); // Define a cor selecionada como a cor do evento
+            setSelectedRecurrence(eventToEdit.recurrence || 'none');
+            setDaysOfWeek(eventToEdit.days_of_week || []);
         } else if (type === 'add') {
-            // Se o tipo for 'add', limpe os campos
-            setNewEvent({ title: '', description: '', time: '', date: selectedDate });
+            setNewEvent({ title: '', description: '', time: '00:00', date: selectedDate || new Date().toISOString().split('T')[0], color: '#378006', recurrence: 'none' });
+            setSelectedColor('#378006'); // Define a cor selecionada como a cor padrão
         }
     }, [eventToEdit, type, selectedDate]);
 
-    // Função para buscar eventos do banco de dados com base na data selecionada
     const fetchEventsFromDatabase = async () => {
         try {
-            const response = await axios.get(`/events?date=${selectedDate}`);
-            return response.data;
+            const response = await axios.get(`/events`);
+            const fetchedEvents = response.data;
+            return fetchedEvents;
         } catch (error) {
-            console.error('Erro ao buscar eventos no banco de dados:', error);
-            throw new Error('Falha ao carregar eventos. Por favor, tente novamente mais tarde.');
+            console.error('Error fetching events:', error);
+            throw new Error('Failed to load events. Please try again later.');
         }
     };
+    const filterEventsForSelectedDate = (fetchedEvents, selectedDate) => {
+        const selectedDateObj = new Date(selectedDate);
+        const selectedDateString = selectedDateObj.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+        const selectedDayOfWeek = selectedDateObj.getDay();
+
+        console.log('Data selecionada:', selectedDate);
+        console.log('Dia da semana selecionado:', selectedDayOfWeek);
+
+        const filteredEvents = fetchedEvents.filter(event => {
+            const eventDate = new Date(event.date);
+            const eventDateString = eventDate.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+            console.log('Data do evento:', eventDateString);
+
+            const isSameDate = selectedDateString === eventDateString;
+            console.log('Mesma data?', isSameDate);
+
+            if (event.days_of_week && event.days_of_week.length > 0) {
+                console.log('Evento com recorrência semanal:', event);
+                if (event.days_of_week.includes(selectedDayOfWeek)) {
+                    console.log('Evento ocorre no dia da semana selecionado.');
+                    return true;
+                } else {
+                    console.log('Evento não ocorre no dia da semana selecionado.');
+                    return false;
+                }
+            } else {
+                if (isSameDate || (event.recurrence === 'weekly' && selectedDayOfWeek === eventDate.getDay())) {
+                    console.log('Evento ocorre na mesma data ou é semanal e ocorre no dia da semana selecionado.');
+                    return true;
+                } else {
+                    console.log('Evento não ocorre na mesma data e não é semanal.');
+                    return false;
+                }
+            }
+        });
+
+        return filteredEvents;
+    };
+
 
     useEffect(() => {
+        console.log("Modal aberto:", type); // Adicionando um log para cada modal aberto
         if (type === 'initial' && selectedDate) {
             const fetchData = async () => {
                 try {
                     const fetchedEvents = await fetchEventsFromDatabase();
-                    // Verifica se a data selecionada corresponde à data de algum dos eventos
-                    const eventsForSelectedDate = fetchedEvents.filter(event => event.date === selectedDate);
-                    if (eventsForSelectedDate.length > 0) {
-                        setEventsForSelectedDate(eventsForSelectedDate);
-                    } else {
-                        setEventsForSelectedDate([]);
-                    }
+                    console.log('Eventos recuperados do banco de dados:', fetchedEvents); // Adicione um log para os eventos recuperados
+
+                    const eventsForSelectedDate = filterEventsForSelectedDate(fetchedEvents, selectedDate);
+                    console.log('Eventos para a data selecionada:', eventsForSelectedDate); // Adicione um log para os eventos filtrados
+
+                    setEventsForSelectedDate(eventsForSelectedDate);
                 } catch (error) {
                     console.error('Error fetching events:', error);
                     // Handle error if needed
@@ -100,28 +146,36 @@ export default function Modal({
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Existing logic to format time...
-        const formattedTime = newEvent.time.split(':').slice(0, 2).join(':');
+        const formattedEvent = {
+            ...newEvent,
+            start: `${newEvent.date}T${newEvent.time}`,
+            allDay: false,
+            color: selectedColor,
+            recurrence: selectedRecurrence,
+            days_of_week: selectedRecurrence === 'weekly' ? daysOfWeek : undefined,
+        };
 
-        // Update state with formatted time
-        setNewEvent(prevState => ({
-            ...prevState,
-            time: formattedTime,
-        }));
+        // Adicione o trecho de código para formatar a hora aqui
+        const formattedTime = newEvent.time.substring(0, 5);
+        formattedEvent.time = formattedTime;
 
-        // Rest of your form submission logic...
         if (type === 'edit') {
-            onEditEvent(newEvent);
+            onEditEvent(formattedEvent);
         } else {
-            onAddEvent(newEvent);
+            onAddEvent(formattedEvent);
         }
 
         handleCloseModal();
-    }
+    };
 
-    const handleDeleteEventClick = (event) => {
-        onDeleteEvent(event.id);
-        handleCloseModal();
+    const handleDeleteEventClick = async (event) => {
+        try {
+            await onDeleteEvent(event.id);
+            const updatedEvents = eventsForSelectedDate.filter((ev) => ev.id !== event.id);
+            setEventsForSelectedDate(updatedEvents);
+        } catch (error) {
+            console.error('Error deleting event:', error);
+        }
     };
 
     const handleContentClick = (e) => {
@@ -129,8 +183,15 @@ export default function Modal({
     };
 
     const handleAddEventClick = () => {
-        onAddEvent();
+        const updatedEvent = {
+            ...newEvent,
+            date: selectedDate || new Date().toISOString().split('T')[0], // Preenchendo o campo de data com selectedDate ou a data atual
+        };
+        setNewEvent(updatedEvent);
+        onAddEvent(updatedEvent); // Chame a função onAddEvent passando o novo evento como argumento
     };
+
+
 
 
     return (
@@ -186,46 +247,118 @@ export default function Modal({
                                     className="px-4 py-2 border rounded-md"
                                 />
                                 <select
-                                    name="label"
-                                    value={newEvent.label}
-                                    onChange={handleChange}
+                                    value={selectedColor}
+                                    onChange={(e) => handleColorChange(e.target.value)}
                                     className="px-4 py-2 border rounded-md"
                                 >
-                                    {Object.keys(labelColors).map(label => (
-                                        <option key={label} value={label} style={{ color: labelColors[label] }}>{label}</option>
-                                    ))}
+                                    <option value="#378006">Green</option>
+                                    <option value="#FF0000">Red</option>
+                                    <option value="#0000FF">Blue</option>
+                                    {/* Adicione outras opções de cores conforme necessário */}
                                 </select>
-                                <div className="mt-6 text-right">
-                                    <PrimaryButton onClick={handleCloseModal} className="mr-2">Close</PrimaryButton>
-                                    <PrimaryButton type="submit">Save Event</PrimaryButton>
-                                </div>
+                                <select
+                                    value={selectedRecurrence}
+                                    onChange={(e) => setSelectedRecurrence(e.target.value)}
+                                    name="recurrence"
+                                    className="px-4 py-2 border rounded-md"
+                                >
+                                    <option value="none">None</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                </select>
+                                {selectedRecurrence === 'weekly' && (
+                                    <div className="flex flex-wrap gap-2">
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={6}
+                                                checked={daysOfWeek.includes(6)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Sunday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={0}
+                                                checked={daysOfWeek.includes(0)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Monday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={1}
+                                                checked={daysOfWeek.includes(1)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Tuesday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={2}
+                                                checked={daysOfWeek.includes(2)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Wednesday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={3}
+                                                checked={daysOfWeek.includes(3)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Thursday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={4}
+                                                checked={daysOfWeek.includes(4)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Friday
+                                        </label>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                value={5}
+                                                checked={daysOfWeek.includes(5)}
+                                                onChange={handleDaysOfWeekChange}
+                                            />
+                                            Saturday
+                                        </label>
+                                    </div>
+                                )}
+                                <PrimaryButton type="submit">
+                                    {type === 'add' ? 'Add Event' : 'Save Changes'}
+                                </PrimaryButton>
                             </form>
                         )}
                         {type === 'initial' && (
-                            <div className="flex flex-col gap-4">
+                            <div>
                                 {eventsForSelectedDate.length > 0 ? (
-                                    <ul>
-                                        {eventsForSelectedDate.map(event => (
-                                            <li key={event.id} className="mb-2 flex justify-between items-center">
-                                                <div>
-                                                    <div className="font-semibold">{event.title}</div>
-                                                    <div>{event.description}</div>
-                                                    <div>{event.time}</div>
-                                                </div>
-                                                <div>
-                                                    <PrimaryButton onClick={() => onEditEvent(event)}>Edit</PrimaryButton>
-                                                    <SecondaryButton onClick={() => handleDeleteEventClick(event)}>Delete</SecondaryButton>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    eventsForSelectedDate.map(event => (
+                                        <div key={event.id} className="mb-4">
+                                            {console.log("Event date:", event.date)}
+                                            <h4 className="text-lg font-semibold">{event.title}</h4>
+                                            <p className="text-sm">{event.description}</p>
+                                            <p className="text-sm">{new Date(event.start).toLocaleTimeString()}</p>
+                                            <p className="text-sm" style={{ color: event.color }}>Color: {event.color}</p>
+                                            <div className="flex gap-2 mt-2">
+                                                <PrimaryButton onClick={() => onEditEvent(event)}>Edit</PrimaryButton>
+                                                <SecondaryButton onClick={() => handleDeleteEventClick(event)}>Delete</SecondaryButton>
+                                            </div>
+                                        </div>
+                                    ))
                                 ) : (
-                                    <div className="text-gray-500">No events for this date.</div>
+                                    <p>No events for this day.</p>
                                 )}
-                                <div className="mt-6 text-right">
-                                    <PrimaryButton onClick={handleCloseModal} className="mr-2">Close</PrimaryButton>
-                                    <PrimaryButton onClick={handleAddEventClick} className="mr-2">Add Event</PrimaryButton>
-                                </div>
+
+                                <PrimaryButton onClick={handleAddEventClick}>Add Event</PrimaryButton>
                             </div>
                         )}
                     </div>
