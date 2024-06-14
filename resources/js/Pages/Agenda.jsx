@@ -8,13 +8,14 @@ import Modal from '../Components/Modal';
 import axios from 'axios';
 
 export default function Agenda() {
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date()); // Exemplo de data clicada
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
   const [events, setEvents] = useState([]);
   const [eventToEdit, setEventToEdit] = useState(null);
   const [error, setError] = useState(null);
+  const [eventsForSelectedDate, setEventsForSelectedDate] = useState([]);
 
   useEffect(() => {
     fetchEvents();
@@ -32,23 +33,39 @@ export default function Agenda() {
     }
   };
 
-  const saveEventsToLocalStorage = (events) => {
-    localStorage.setItem('events', JSON.stringify(events));
-  };
-
   const handleDateClick = (info) => {
-    const clickedDate = info.date; // Use info.date em vez de info.dateStr
-    setSelectedDate(clickedDate);
+    const clickedDateUTC = new Date(info.date);
+    console.log('Data clicada (UTC):', clickedDateUTC);
+
+    const clickedDayOfWeek = clickedDateUTC.getUTCDay();
+    console.log('Dia da semana clicado:', clickedDayOfWeek);
+
+    const eventsForClickedDate = events.filter(event => {
+      console.log('Analisando evento:', event);
+      if (!event.recurrence || event.recurrence === 'none') {
+        const eventDateUTC = new Date(event.date);
+        console.log('Evento não recorrente - Data do evento (UTC):', eventDateUTC);
+        return eventDateUTC.toISOString().split('T')[0] === clickedDateUTC.toISOString().split('T')[0];
+      } else if (event.recurrence === 'daily') {
+        const eventStartDateUTC = new Date(event.date);
+        const eventEndDateUTC = event.endDate ? new Date(event.endDate) : new Date('9999-12-31');
+        console.log('Evento diário - Data de início (UTC):', eventStartDateUTC, 'Data de término (UTC):', eventEndDateUTC);
+        return clickedDateUTC >= eventStartDateUTC && clickedDateUTC <= eventEndDateUTC;
+      } else if (event.recurrence === 'weekly' && event.days_of_week) {
+        console.log('Evento semanal - Dias da semana do evento:', event.days_of_week);
+        return event.days_of_week.includes(clickedDayOfWeek);
+      }
+      console.log('Evento não incluído:', event);
+      return false;
+    });
+
+    console.log('Eventos filtrados para a data clicada:', eventsForClickedDate);
+
+    setSelectedDate(new Date(clickedDateUTC.getTime()));
+    setEventsForSelectedDate(eventsForClickedDate);
     setIsInitialModalOpen(true);
-    console.log('Data selecionada:', clickedDate);
-
-    // Adicione um log específico para o dia da semana selecionado
-    const dayOfWeek = clickedDate.getDay();
-    const dayOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    console.log('Dia da semana selecionado:', dayOfWeekNames[dayOfWeek]);
+    console.log('Modal inicial aberto com eventos:', eventsForClickedDate);
   };
-
-
 
   const handleCloseModals = () => {
     setIsInitialModalOpen(false);
@@ -56,24 +73,30 @@ export default function Agenda() {
     setIsEditEventModalOpen(false);
     setSelectedDate('');
     setEventToEdit(null);
+    setEventsForSelectedDate([]);
+    console.log('Fechando todos os modais');
   };
 
   const handleAddEventClick = () => {
     setIsInitialModalOpen(false);
     setIsAddEventModalOpen(true);
+    console.log('Abrindo modal de adicionar evento');
   };
 
+
+
   const handleEditEventClick = (event) => {
-    setEventToEdit(event);
-    setSelectedDate(event.start);
+    setEventToEdit(event); // Passa o evento a ser editado
     setIsInitialModalOpen(false);
+    setIsAddEventModalOpen(false);
     setIsEditEventModalOpen(true);
+    console.log('Abrindo modal de edição de evento:', event);
   };
 
   const handleEditEvent = async (updatedEvent) => {
     try {
-      const formattedTime = updatedEvent.time.substring(0, 5); // Formata a hora para 'HH:mm'
-      updatedEvent.time = formattedTime; // Atualiza a hora no evento atualizado
+      const formattedTime = updatedEvent.time.substring(0, 5);
+      updatedEvent.time = formattedTime;
 
       const response = await axios.put(`/events/${updatedEvent.id}`, updatedEvent);
       const editedEvent = response.data;
@@ -84,17 +107,20 @@ export default function Agenda() {
       saveEventsToLocalStorage(updatedEvents);
 
       handleCloseModals();
+      console.log('Evento editado:', editedEvent);
     } catch (error) {
-      console.error('Error editing event:', error);
+      console.error('Erro ao editar evento:', error);
     }
   };
 
-
-
   const handleAddEvent = async (newEvent) => {
     try {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      newEvent.date = formattedDate;
+
       const response = await axios.post('/events', newEvent);
       const addedEvent = response.data;
+
       const formattedEvent = {
         id: addedEvent.id,
         title: addedEvent.title,
@@ -103,63 +129,34 @@ export default function Agenda() {
         time: addedEvent.time,
         color: addedEvent.color,
         recurrence: addedEvent.recurrence,
-        days_of_week: addedEvent.daysOfWeek // Adicione days_of_week
+        days_of_week: addedEvent.daysOfWeek
       };
-      const updatedEvents = [...events, formattedEvent]; // Adiciona o novo evento ao array de eventos existentes
-      console.log('Novo evento formatado:', formattedEvent);
-      console.log('Eventos atualizados antes de setEvents:', updatedEvents);
-      setEvents(updatedEvents); // Atualiza o estado local de eventos
-      saveEventsToLocalStorage(updatedEvents); // Salva os eventos atualizados no armazenamento local
+
+      const updatedEvents = [...events, formattedEvent];
+      setEvents(updatedEvents);
+      saveEventsToLocalStorage(updatedEvents);
       handleCloseModals();
-      fetchEvents(); // Você precisa recuperar os eventos atualizados após adicionar um novo evento
+      fetchEvents();
+      console.log('Evento adicionado:', formattedEvent);
     } catch (error) {
-      console.error('Error adding event:', error);
+      console.error('Erro ao adicionar evento:', error);
     }
   };
-
-
 
   const handleDeleteEvent = async (eventId) => {
     try {
       await axios.delete(`/events/${eventId}`);
-      const updatedEvents = events.filter(event => event.id !== eventId);
-      setEvents(updatedEvents);
-      saveEventsToLocalStorage(updatedEvents);
-
+      fetchEvents();
+      setEventsForSelectedDate(prevEvents => prevEvents.filter(event => event.id !== eventId));
+      console.log('Evento deletado, ID:', eventId);
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Erro ao deletar evento:', error);
     }
   };
 
-  const getEventsForSelectedDate = () => {
-    const selectedDateObj = new Date(selectedDate);
-    const selectedDayOfWeek = selectedDateObj.getDay();
-    const daysOfWeekOrdered = [1, 2, 3, 4, 5, 6, 0]; // Segunda a Domingo
-
-    const filteredEvents = events.filter(event => {
-      const eventDate = new Date(event.date);
-      const eventDayOfWeek = eventDate.getDay();
-
-      const isSameDate = selectedDateObj.toDateString() === eventDate.toDateString();
-
-      if (isSameDate) {
-        return true;
-      }
-
-      if (
-        event.recurrence === 'weekly' &&
-        event.days_of_week &&
-        event.days_of_week.includes(daysOfWeekOrdered[selectedDayOfWeek])
-      ) {
-        return true;
-      }
-
-      return false;
-    });
-
-    return filteredEvents;
+  const saveEventsToLocalStorage = (events) => {
+    localStorage.setItem('events', JSON.stringify(events));
   };
-
 
   return (
     <div>
@@ -185,10 +182,15 @@ export default function Agenda() {
           <h2 className="text-xl font-bold">Agenda</h2>
           <button
             className="px-4 py-2 bg-blue-500 text-white rounded"
-            onClick={handleAddEventClick}
+            onClick={() => {
+              setSelectedDate(new Date());
+              setIsAddEventModalOpen(true);
+              console.log('Botão de adicionar evento clicado');
+            }}
           >
             Add Event
           </button>
+
         </div>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -199,16 +201,27 @@ export default function Agenda() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay',
           }}
           dateClick={handleDateClick}
-          events={events.map(event => ({
-            ...event,
-            daysOfWeek: event.recurrence === 'weekly' ? event.days_of_week : undefined,
-            startRecur: event.recurrence === 'daily' ? event.date : undefined,
-            endRecur: event.recurrence === 'daily' ? event.endDate : undefined,
-          }))}
+          events={events.map(event => {
+            if (event.recurrence === 'daily') {
+              return {
+                ...event,
+                startRecur: event.date,
+                endRecur: event.endDate || '9999-12-31',
+              };
+            } else if (event.recurrence === 'weekly') {
+              return {
+                ...event,
+                daysOfWeek: event.days_of_week,
+              };
+            } else {
+              return {
+                ...event,
+              };
+            }
+          })}
           editable={true}
           selectable={true}
         />
-
       </div>
 
       <Modal
@@ -220,24 +233,9 @@ export default function Agenda() {
         onDeleteEvent={handleDeleteEvent}
         selectedDate={selectedDate}
         onAddEvent={handleAddEventClick}
-      >
-        <h2 className="text-lg font-semibold mb-4">Events for {new Date(selectedDate).toDateString()}</h2>
-        {getEventsForSelectedDate().map(event => (
-          event.id && (
-            <div key={event.id} className="mb-2 flex justify-between items-center">
-              <div>
-                <p><strong>{event.title}</strong></p>
-                <p>{event.description}</p>
-              </div>
-              <div>
-                <button className="px-2 py-1 bg-yellow-500 text-white rounded mr-2" onClick={() => handleEditEventClick(event)}>Edit</button>
-                <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={() => handleDeleteEvent(event.id)}>Delete</button>
-              </div>
-            </div>
-          )
-        ))}
-
-      </Modal>
+        eventsForSelectedDate={eventsForSelectedDate} // Passa os eventos filtrados por data
+        fetchEvents={fetchEvents}
+      />
 
 
       <Modal
@@ -245,13 +243,9 @@ export default function Agenda() {
         onClose={handleCloseModals}
         maxWidth="xl"
         type="add"
-        selectedDate={selectedDate}
+        selectedDate={selectedDate instanceof Date ? selectedDate.toISOString().split('T')[0] : ''}
         onAddEvent={handleAddEvent}
-        setIsModalOpen={setIsAddEventModalOpen}
-      >
-        <h2 className="text-lg font-semibold mb-4">Add Event</h2>
-      </Modal>
-
+      />
 
 
       <Modal
@@ -261,9 +255,7 @@ export default function Agenda() {
         type="edit"
         onEditEvent={handleEditEvent}
         eventToEdit={eventToEdit}
-      >
-        <h2 className="text-lg font-semibold mb-4">Edit Event</h2>
-      </Modal>
+      />
     </div>
   );
 }
