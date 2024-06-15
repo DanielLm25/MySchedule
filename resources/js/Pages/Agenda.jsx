@@ -6,9 +6,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import NavLink from '../Components/NavLink';
 import Modal from '../Components/Modal';
 import axios from 'axios';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'; // Importe o layout desejado aqui
 
-export default function Agenda() {
-  const [selectedDate, setSelectedDate] = useState(new Date()); // Exemplo de data clicada
+export default function Agenda({ auth }) { // Receba 'auth' como prop, se necessário
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [isInitialModalOpen, setIsInitialModalOpen] = useState(false);
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
@@ -83,10 +84,8 @@ export default function Agenda() {
     console.log('Abrindo modal de adicionar evento');
   };
 
-
-
   const handleEditEventClick = (event) => {
-    setEventToEdit(event); // Passa o evento a ser editado
+    setEventToEdit(event);
     setIsInitialModalOpen(false);
     setIsAddEventModalOpen(false);
     setIsEditEventModalOpen(true);
@@ -159,69 +158,64 @@ export default function Agenda() {
   };
 
   return (
-    <div>
-      <nav className="bg-gray-800">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-          <div className="relative flex items-center justify-between h-16">
-            <div className="flex items-center justify-center">
-              <div className="flex-shrink-0 text-white">Logo</div>
-              <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-4">
-                  <NavLink href="/agenda" className="text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                    Agenda
-                  </NavLink>
+    <AuthenticatedLayout user={auth.user} header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}>
+      <div className="py-12">
+        <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+          <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div className="p-6 text-gray-900">
+              <nav className="bg-gray-800">
+                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+
                 </div>
+              </nav>
+              <div className="container mx-auto mt-4">
+                {error && <div className="text-red-500">{error}</div>}
+                <div className="flex justify-between items-center mb-4">
+                  <button
+                    className="px-4 py-2 bg-blue-500 text-white rounded"
+                    onClick={() => {
+                      setSelectedDate(new Date());
+                      setIsAddEventModalOpen(true);
+                      console.log('Botão de adicionar evento clicado');
+                    }}
+                  >
+                    Add Event
+                  </button>
+                </div>
+                <FullCalendar
+                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  headerToolbar={{
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay',
+                  }}
+                  dateClick={handleDateClick}
+                  events={events.map(event => {
+                    if (event.recurrence === 'daily') {
+                      return {
+                        ...event,
+                        startRecur: event.date,
+                        endRecur: event.endDate || '9999-12-31',
+                      };
+                    } else if (event.recurrence === 'weekly') {
+                      return {
+                        ...event,
+                        daysOfWeek: event.days_of_week,
+                      };
+                    } else {
+                      return {
+                        ...event,
+                      };
+                    }
+                  })}
+                  editable={true}
+                  selectable={true}
+                />
               </div>
             </div>
           </div>
         </div>
-      </nav>
-      <div className="container mx-auto mt-4">
-        {error && <div className="text-red-500">{error}</div>}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Agenda</h2>
-          <button
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-            onClick={() => {
-              setSelectedDate(new Date());
-              setIsAddEventModalOpen(true);
-              console.log('Botão de adicionar evento clicado');
-            }}
-          >
-            Add Event
-          </button>
-
-        </div>
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay',
-          }}
-          dateClick={handleDateClick}
-          events={events.map(event => {
-            if (event.recurrence === 'daily') {
-              return {
-                ...event,
-                startRecur: event.date,
-                endRecur: event.endDate || '9999-12-31',
-              };
-            } else if (event.recurrence === 'weekly') {
-              return {
-                ...event,
-                daysOfWeek: event.days_of_week,
-              };
-            } else {
-              return {
-                ...event,
-              };
-            }
-          })}
-          editable={true}
-          selectable={true}
-        />
       </div>
 
       <Modal
@@ -233,10 +227,9 @@ export default function Agenda() {
         onDeleteEvent={handleDeleteEvent}
         selectedDate={selectedDate}
         onAddEvent={handleAddEventClick}
-        eventsForSelectedDate={eventsForSelectedDate} // Passa os eventos filtrados por data
+        eventsForSelectedDate={eventsForSelectedDate}
         fetchEvents={fetchEvents}
       />
-
 
       <Modal
         show={isAddEventModalOpen}
@@ -247,7 +240,6 @@ export default function Agenda() {
         onAddEvent={handleAddEvent}
       />
 
-
       <Modal
         show={isEditEventModalOpen}
         onClose={handleCloseModals}
@@ -256,6 +248,6 @@ export default function Agenda() {
         onEditEvent={handleEditEvent}
         eventToEdit={eventToEdit}
       />
-    </div>
+    </AuthenticatedLayout>
   );
 }
