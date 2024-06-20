@@ -1,7 +1,22 @@
 import React from 'react';
+import axios from 'axios';
 
 const BlockedDayModal = ({ show, onClose, blockedDay }) => {
   if (!show) return null;
+
+  const handleUnblockDay = async (blockedDayId) => {
+    try {
+      const response = await axios.delete(`/blocked-days/${blockedDayId}`);
+      console.log('Dia desbloqueado com sucesso:', response.data);
+      // Aqui você pode adicionar lógica adicional, se necessário, após a exclusão
+
+      // Fechar o modal após desbloquear o dia (opcional)
+      onClose();
+    } catch (error) {
+      console.error('Erro ao desbloquear dia bloqueado:', error);
+      // Tratar o erro de acordo com sua lógica de aplicação, se necessário
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -27,8 +42,15 @@ const BlockedDayModal = ({ show, onClose, blockedDay }) => {
               <p className="text-lg mb-4"><span className="font-semibold">Reason:</span> {blockedDay.reason}</p>
             </div>
 
-            {/* Botão de fechar */}
+            {/* Botão de desbloqueio */}
             <div className="flex justify-center">
+              <button onClick={() => handleUnblockDay(blockedDay.id)} className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 focus:outline-none">
+                Unblock Day
+              </button>
+            </div>
+
+            {/* Botão de fechar */}
+            <div className="flex justify-center mt-4">
               <button onClick={onClose} className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 focus:outline-none">
                 Close
               </button>

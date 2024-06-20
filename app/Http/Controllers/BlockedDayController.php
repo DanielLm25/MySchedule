@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlockedDay;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\User;
 
 class BlockedDayController extends Controller
 {
@@ -14,18 +14,12 @@ class BlockedDayController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        /** @var User $user */
-        $user = Auth::user();
+        $userId = Auth::id(); // Obtém o ID do usuário autenticado
 
-        // Verificar se o usuário está autenticado
-        if (!$user) {
-            return response()->json(['error' => 'Usuário não autenticado'], 401);
-        }
-
-        // Obter os dias bloqueados do usuário utilizando a relação definida
-        $blockedDays = $user->blockedDays()->get();
+        // Recupere os dias bloqueados apenas para o usuário autenticado
+        $blockedDays = BlockedDay::where('user_id', $userId)->get();
 
         return response()->json($blockedDays);
     }
@@ -38,21 +32,23 @@ class BlockedDayController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'type' => 'required|in:range,specific,recurring',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date',
             'specific_dates' => 'nullable|array',
             'recurring_days' => 'nullable|array',
+            'reason' => 'required|string|max:255',
         ]);
 
         $blockedDay = BlockedDay::create([
             'user_id' => Auth::id(),
-            'type' => $request->type,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'specific_dates' => $request->specific_dates,
-            'recurring_days' => $request->recurring_days,
+            'type' => $validated['type'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'specific_dates' => $validated['specific_dates'],
+            'recurring_days' => $validated['recurring_days'],
+            'reason' => $validated['reason'],
         ]);
 
         return response()->json($blockedDay, 201);
@@ -85,12 +81,13 @@ class BlockedDayController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
+        $validated = $request->validate([
             'type' => 'required|in:range,specific,recurring',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date',
             'specific_dates' => 'nullable|array',
             'recurring_days' => 'nullable|array',
+            'reason' => 'required|string|max:255',
         ]);
 
         $blockedDay = BlockedDay::findOrFail($id);
@@ -101,11 +98,12 @@ class BlockedDayController extends Controller
         }
 
         $blockedDay->update([
-            'type' => $request->type,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'specific_dates' => $request->specific_dates,
-            'recurring_days' => $request->recurring_days,
+            'type' => $validated['type'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'specific_dates' => $validated['specific_dates'],
+            'recurring_days' => $validated['recurring_days'],
+            'reason' => $validated['reason'],
         ]);
 
         return response()->json($blockedDay);
@@ -119,6 +117,7 @@ class BlockedDayController extends Controller
      */
     public function destroy($id)
     {
+        // Buscar o dia bloqueado pelo ID
         $blockedDay = BlockedDay::findOrFail($id);
 
         // Verificar se o dia bloqueado pertence ao usuário logado
@@ -126,6 +125,7 @@ class BlockedDayController extends Controller
             return response()->json(['error' => 'Acesso não autorizado'], 403);
         }
 
+        // Excluir o dia bloqueado
         $blockedDay->delete();
 
         return response()->json(['message' => 'Dia bloqueado removido com sucesso']);

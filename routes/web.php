@@ -51,9 +51,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Rota para agenda
     Route::middleware('auth')->get('/agenda', function () {
-        Log::info('Accessing agenda page...');
         return Inertia::render('Agenda');
-    });
+    })->name('agenda'); // Definindo o nome da rota como 'agenda'
+
 
     // Recurso para EventController
     Route::resource('events', EventController::class)->middleware('auth');
@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Recurso para BlockedDayController
     Route::post('/blocked-days', [BlockedDayController::class, 'store']);
     Route::get('/blocked-days', [BlockedDayController::class, 'index']);
+    Route::delete('/blocked-days/{blocked_day}', [BlockedDayController::class, 'destroy'])->name('blocked-days.destroy');
 });
 
 // Incluir rotas de autenticação padrão do Laravel

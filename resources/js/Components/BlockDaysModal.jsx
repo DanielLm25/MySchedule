@@ -12,13 +12,14 @@ export default function BlockDaysModal({
 }) {
   const [blockData, setBlockData] = useState({
     type: 'specific',
-    specific_date: '',
-    start_date: '',
+    specific_date: '', // Inicializa como specific_date
+    start_date: '',    // Inicializa como start_date
     end_date: '',
     recurring_days: [],
     reason: '', // Inicialmente vazio
     user_id: null,
   });
+
 
   useEffect(() => {
     if (selectedUser) {
@@ -29,6 +30,7 @@ export default function BlockDaysModal({
     }
   }, [selectedUser]);
 
+
   const [selectedOption, setSelectedOption] = useState('specific');
 
   const handleOptionChange = (e) => {
@@ -36,24 +38,27 @@ export default function BlockDaysModal({
     setSelectedOption(value);
 
     // Limpar campos específicos quando a opção muda
-    setBlockData({
+    setBlockData((prevBlockData) => ({
+      ...prevBlockData,
       type: value,
       specific_date: '',
       start_date: '',
       end_date: '',
       recurring_days: [],
       reason: '', // Limpar reason ao mudar a opção, se necessário
-      user_id: selectedUser ? selectedUser.id : null,
-    });
+      user_id: selectedUser ? selectedUser.id : prevBlockData.user_id, // Manter o user_id existente
+    }));
   };
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBlockData((prevBlockData) => ({
       ...prevBlockData,
-      [name]: value,
+      [name]: value, // Isso assume que o nome é 'start_date'
     }));
   };
+
 
   const handleDaySelect = (day) => {
     if (blockData.recurring_days.includes(day)) {
@@ -85,8 +90,6 @@ export default function BlockDaysModal({
     }
   };
 
-  // Log para verificar o estado de blockData durante a renderização
-  console.log('Current blockData state:', blockData);
 
   return (
     <Transition.Root show={show} as={Fragment}>
@@ -209,6 +212,7 @@ export default function BlockDaysModal({
                     className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                   />
                 </div>
+
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
                   <SecondaryButton type="button" onClick={onClose}>
                     Cancelar

@@ -8,7 +8,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import SearchBar from '../Components/SearchBar';
 import Modal from '../Components/Modal';
 import BlockDaysModal from '../Components/BlockDaysModal';
-import BlockedDayModal from '@/Components/ BlockedDayModal';
+import BlockedDayModal from '@/Components/BlockedDayModal';
 
 export default function Agenda({ auth }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -27,26 +27,31 @@ export default function Agenda({ auth }) {
 
   useEffect(() => {
     fetchEvents();
-    fetchBlockedDays(); // Carrega os dias bloqueados ao montar o componente
   }, []);
+
+  useEffect(() => {
+    if (selectedUser) {
+      fetchBlockedDays(selectedUser.id);
+    }
+  }, [selectedUser]);
 
   const fetchEvents = async () => {
     try {
       const response = await axios.get(`/events?user_id=${selectedUser.id}`);
+      console.log('Eventos recuperados:', response.data); // Adiciona um log dos eventos recuperados
       setEvents(response.data);
       localStorage.setItem('events', JSON.stringify(response.data));
-      console.log('Eventos recuperados:', response.data);
     } catch (error) {
       console.error('Erro ao buscar eventos:', error);
       setError('Falha ao carregar eventos. Por favor, tente novamente mais tarde.');
     }
   };
 
-  const fetchBlockedDays = async () => {
+
+  const fetchBlockedDays = async (userId) => {
     try {
-      const response = await axios.get('/blocked-days');
+      const response = await axios.get(`/blocked-days?user_id=${userId}`);
       setBlockedDays(response.data);
-      console.log('Dias bloqueados recuperados:', response.data);
     } catch (error) {
       console.error('Erro ao buscar dias bloqueados:', error);
       setError('Falha ao carregar dias bloqueados. Por favor, tente novamente mais tarde.');
@@ -54,31 +59,22 @@ export default function Agenda({ auth }) {
   };
 
 
-
   const handleDateClick = (info) => {
     const clickedDateUTC = new Date(info.date);
-
-    // Verifica se o dia clicado está bloqueado
     const clickedDateStr = clickedDateUTC.toISOString().slice(0, 10);
+
     const clickedBlockedDay = blockedDays.find((day) => {
-      if (day.type === "specific") {
-        return day.start_date === clickedDateStr;
-      } else if (day.type === "range") {
-        return (
-          clickedDateStr >= day.start_date && clickedDateStr <= day.end_date
-        );
-      } else if (day.type === "recurring") {
-        const weekday = clickedDateUTC.getUTCDay(); // 0 (Sunday) to 6 (Saturday)
-        return day.recurring_days.includes(weekday);
-      }
-      return false;
+      // Verifica se o dia bloqueado pertence ao usuário selecionado
+      return day.user_id === selectedUser.id && (
+        (day.type === "specific" && day.start_date === clickedDateStr) ||
+        (day.type === "range" && clickedDateStr >= day.start_date && clickedDateStr <= day.end_date) ||
+        (day.type === "recurring" && day.recurring_days.includes(clickedDateUTC.getUTCDay()))
+      );
     });
 
-    // Se o dia clicado estiver bloqueado, abre o modal de detalhes do dia bloqueado
     if (clickedBlockedDay) {
-      setSelectedBlockedDay(clickedBlockedDay); // Armazena o dia bloqueado selecionado
+      setSelectedBlockedDay(clickedBlockedDay);
     } else {
-      // Se não estiver bloqueado, abre o modal padrão de eventos
       const eventsForClickedDate = events.filter((event) => {
         if (!event.recurrence || event.recurrence === "none") {
           const eventDateUTC = new Date(event.date);
@@ -108,8 +104,6 @@ export default function Agenda({ auth }) {
   };
 
 
-
-
   const handleSelectEvent = (event) => {
     setSelectedDate(new Date(event.date));
     setEventsForSelectedDate([event]);
@@ -123,6 +117,7 @@ export default function Agenda({ auth }) {
     setSelectedDate('');
     setEventToEdit(null);
     setEventsForSelectedDate([]);
+    setSelectedBlockedDay(null); // Limpa o dia bloqueado selecionado ao fechar os modais
   };
 
   const handleAddEventClick = () => {
@@ -233,12 +228,14 @@ export default function Agenda({ auth }) {
                   >
                     Add Event
                   </button>
-                  <button
-                    className="px-4 py-2 bg-red-500 text-white rounded"
-                    onClick={openBlockDaysModal}
-                  >
-                    Block Days
-                  </button>
+                  {auth.user.id === selectedUser.id && ( // Mostra o botão apenas se o usuário autenticado for o proprietário da agenda
+                    <button
+                      className="px-4 py-2 bg-red-500 text-white rounded"
+                      onClick={openBlockDaysModal}
+                    >
+                      Block Days
+                    </button>
+                  )}
                 </div>
 
                 <FullCalendar
@@ -276,17 +273,12 @@ export default function Agenda({ auth }) {
                   dayCellContent={(arg) => {
                     const dateStr = arg.date.toISOString().slice(0, 10);
 
-                    // Verifica se a data atual está bloqueada
-                    const isBlocked = blockedDays.some(day => {
-                      if (day.type === 'specific') {
-                        return day.start_date === dateStr;
-                      } else if (day.type === 'range') {
-                        return dateStr >= day.start_date && dateStr <= day.end_date;
-                      } else if (day.type === 'recurring') {
-                        const weekday = arg.date.getUTCDay(); // 0 (Sunday) to 6 (Saturday)
-                        return day.recurring_days.includes(weekday);
-                      }
-                      return false;
+                    // Verifica se o dia é bloqueado para o usuário selecionado
+                    const isBlocked = blockedDays.some((day) => {
+                      return day.user_id === selectedUser.id &&
+                        ((day.type === "specific" && day.start_date === dateStr) ||
+                          (day.type === "range" && dateStr >= day.start_date && dateStr <= day.end_date) ||
+                          (day.type === "recurring" && day.recurring_days.includes(arg.date.getUTCDay())));
                     });
 
                     return (
@@ -300,6 +292,7 @@ export default function Agenda({ auth }) {
                       </>
                     );
                   }}
+
                 />
 
                 {selectedBlockedDay && (
@@ -307,6 +300,8 @@ export default function Agenda({ auth }) {
                     show={true} // Deve controlar a visibilidade do modal
                     onClose={() => setSelectedBlockedDay(null)} // Função para fechar o modal
                     blockedDay={selectedBlockedDay} // Informações do dia bloqueado para exibir no modal
+                    selectedUser={selectedUser} // Passa o usuário selecionado para o modal
+                    authUserId={auth.user.id} // Passa o ID do usuário autenticado para o modal
                   />
                 )}
 
@@ -317,10 +312,10 @@ export default function Agenda({ auth }) {
       </div>
 
       <BlockDaysModal
-        show={isBlockDaysModalOpen}
+        show={isBlockDaysModalOpen && auth.user.id === selectedUser.id} // Somente mostra se o usuário autenticado for o proprietário da agenda
         onClose={closeBlockDaysModal}
-        auth={auth}
         fetchBlockedDays={fetchBlockedDays}
+        selectedUser={selectedUser}
       />
 
       <Modal
@@ -334,7 +329,10 @@ export default function Agenda({ auth }) {
         onAddEvent={handleAddEventClick}
         eventsForSelectedDate={eventsForSelectedDate}
         fetchEvents={fetchEvents}
+        authUserId={auth.user.id} // ID do usuário autenticado
+        selectedUser={selectedUser} // Usuário selecionado para exibir na modal
       />
+
 
       <Modal
         show={isAddEventModalOpen}
@@ -356,4 +354,4 @@ export default function Agenda({ auth }) {
       />
     </AuthenticatedLayout>
   );
-} 
+}

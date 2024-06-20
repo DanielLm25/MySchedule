@@ -13,8 +13,9 @@ export default function Modal({
     selectedDate = '',
     onAddEvent,
     eventsForSelectedDate = [],
-    labelColors,
-    selectedUser, // Novo prop para receber o usuário selecionado
+    selectedUser,
+    authUserId
+    // Novo prop para receber o usuário selecionado
 }) {
     const [newEvent, setNewEvent] = useState({
         title: '',
@@ -73,6 +74,9 @@ export default function Modal({
             setSelectedColor('#378006');
             setSelectedDaysOfWeek([]);
         }
+        console.log('Selected user:', selectedUser); // Adicione este log
+        console.log('Auth User ID:', authUserId);
+
     }, [eventToEdit, selectedDate, selectedUser]);
 
     const handleInputChange = (e) => {
@@ -169,19 +173,24 @@ export default function Modal({
                                                         {event.recurrence === 'weekly' && (
                                                             <p className="text-sm">Ocorre {event.days_of_week.map(day => daysOfWeekOptions.find(opt => opt.value === day.toString()).label).join(', ')}</p>
                                                         )}
+
                                                         <div className="flex mt-2">
-                                                            <button
-                                                                className="px-4 py-2 bg-yellow-500 text-white rounded mr-2"
-                                                                onClick={() => onEditEvent(event)}
-                                                            >
-                                                                Editar
-                                                            </button>
-                                                            <button
-                                                                className="px-4 py-2 bg-red-500 text-white rounded"
-                                                                onClick={() => onDeleteEvent(event.id)}
-                                                            >
-                                                                Deletar
-                                                            </button>
+                                                            {selectedUser.id === authUserId && (
+                                                                <>
+                                                                    <button
+                                                                        className="px-4 py-2 bg-yellow-500 text-white rounded mr-2"
+                                                                        onClick={() => onEditEvent(event)}
+                                                                    >
+                                                                        Editar
+                                                                    </button>
+                                                                    <button
+                                                                        className="px-4 py-2 bg-red-500 text-white rounded"
+                                                                        onClick={() => onDeleteEvent(event.id)}
+                                                                    >
+                                                                        Deletar
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))
@@ -197,6 +206,7 @@ export default function Modal({
                                         <PrimaryButton type="button" onClick={onAddEvent}>
                                             Adicionar Evento
                                         </PrimaryButton>
+
                                     </div>
                                 </>
                             ) : (
@@ -309,4 +319,4 @@ export default function Modal({
             </Dialog>
         </Transition.Root>
     );
-}
+}    
