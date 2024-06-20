@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
+
 
 class AuthenticatedSessionController extends Controller
 {
@@ -18,6 +20,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
+        Log::info('Displaying login view...');
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
@@ -29,11 +32,12 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        Log::info('Handling authentication request...');
         $request->authenticate();
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('agenda.index', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
@@ -41,6 +45,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        Log::info('Logging out user...');
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

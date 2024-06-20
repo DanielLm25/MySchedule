@@ -22,8 +22,11 @@ export default function Login({ status, canResetPassword }) {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('login'));
+    };
+
+    const handleGoogleLogin = () => {
+        window.location = '/auth/google'; // Redireciona para a rota de autenticação do Google
     };
 
     return (
@@ -77,7 +80,7 @@ export default function Login({ status, canResetPassword }) {
                     </label>
                 </div>
 
-                <div className="flex items-center justify-end mt-4">
+                <div className="flex items-center justify-between mt-4">
                     {canResetPassword && (
                         <Link
                             href={route('password.request')}
@@ -87,11 +90,17 @@ export default function Login({ status, canResetPassword }) {
                         </Link>
                     )}
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                    <PrimaryButton type="submit" disabled={processing}>
                         Log in
                     </PrimaryButton>
                 </div>
             </form>
+
+            <div className="mt-4">
+                <PrimaryButton onClick={handleGoogleLogin} disabled={processing}>
+                    Log in with Google
+                </PrimaryButton>
+            </div>
         </GuestLayout>
     );
 }

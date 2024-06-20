@@ -1,11 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.custom-modal-overlay {
-  @apply fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center;
-}
-
-.custom-modal-content {
-  @apply bg-white p-4 rounded shadow-md max-w-lg mx-auto;
-}

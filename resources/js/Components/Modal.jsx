@@ -14,6 +14,7 @@ export default function Modal({
     onAddEvent,
     eventsForSelectedDate = [],
     labelColors,
+    selectedUser, // Novo prop para receber o usuário selecionado
 }) {
     const [newEvent, setNewEvent] = useState({
         title: '',
@@ -22,7 +23,8 @@ export default function Modal({
         date: selectedDate || '', // Utiliza selectedDate como valor padrão para date
         label: '',
         recurrence: '',
-        days_of_week: []
+        days_of_week: [],
+        user_id: selectedUser ? selectedUser.id : null, // Adiciona user_id ao novo evento
     });
 
     const [selectedColor, setSelectedColor] = useState('#378006');
@@ -49,7 +51,8 @@ export default function Modal({
             setNewEvent({
                 ...eventToEdit,
                 date: eventToEdit.date, // Manter a data original do evento
-                days_of_week: eventToEdit.days_of_week || []
+                days_of_week: eventToEdit.days_of_week || [],
+                user_id: eventToEdit.user_id, // Manter o user_id original do evento
             });
             setSelectedRecurrence(eventToEdit.recurrence || 'none');
             setSelectedColor(eventToEdit.color || '#378006');
@@ -63,13 +66,14 @@ export default function Modal({
                 date: selectedDate, // Atualiza newEvent.date com selectedDate
                 label: '',
                 recurrence: '',
-                days_of_week: []
+                days_of_week: [],
+                user_id: selectedUser ? selectedUser.id : null, // Atualiza user_id para o usuário selecionado
             });
             setSelectedRecurrence('none');
             setSelectedColor('#378006');
             setSelectedDaysOfWeek([]);
         }
-    }, [eventToEdit, selectedDate]);
+    }, [eventToEdit, selectedDate, selectedUser]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -207,7 +211,8 @@ export default function Modal({
                                                 value={newEvent.title}
                                                 onChange={handleInputChange}
                                                 className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                                                required />
+                                                required
+                                            />
                                         </div>
                                         <div className="mt-4">
                                             <label className="block text-sm font-medium text-gray-700">Descrição</label>
