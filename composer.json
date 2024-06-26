@@ -2,16 +2,23 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^1.0",
         "kreait/firebase-php": "^7.12",
         "laravel/framework": "^11.0",
+        "laravel/pulse": "^1.2",
+        "laravel/reverb": "@beta",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.14",
         "laravel/tinker": "^2.9",
+        "livewire/livewire": "^3.5",
+        "predis/predis": "^2.0",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
@@ -67,6 +74,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "beta",
     "prefer-stable": true
 }

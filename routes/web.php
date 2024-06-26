@@ -5,10 +5,17 @@ use App\Http\Controllers\EventController;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\GoogleController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\SearchController;
 use App\Models\User;  // Importe o modelo User
 use App\Http\Controllers\BlockedDayController;  // Importe o BlockedDayController
+use Illuminate\Support\Facades\Redis;
+
+
+Route::get('/event-count', function () {
+    $eventCount = Redis::get('event_count') ?? 0;
+    return response()->json(['count' => $eventCount]);
+});
+
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login')->middleware('web');
 
