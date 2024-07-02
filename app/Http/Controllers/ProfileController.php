@@ -13,8 +13,6 @@ use Inertia\Response;
 use Illuminate\Support\Str;
 use App\Models\User;
 
-
-
 class ProfileController extends Controller
 {
     /**
@@ -28,6 +26,7 @@ class ProfileController extends Controller
                 'name' => $request->user()->name,
                 'email' => $request->user()->email,
                 'permission_type' => $request->user()->permission_type,
+                'access_code' => $request->user()->access_code,
             ],
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
@@ -71,9 +70,6 @@ class ProfileController extends Controller
 
         return response()->json(['access_code' => $user->access_code], 200);
     }
-
-
-
 
     /**
      * Delete the user's account.

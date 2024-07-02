@@ -8,21 +8,17 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SearchController;
 use App\Models\User;  // Importe o modelo User
 use App\Http\Controllers\BlockedDayController;  // Importe o BlockedDayController
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Auth;
 
 
-Route::get('/event-count', function () {
-    $eventCount = Redis::get('event_count') ?? 0;
-    return response()->json(['count' => $eventCount]);
-});
+use App\Http\Controllers\UserController;
+
+Route::post('/user/{id}/access', [UserController::class, 'verifyAccessToken']);
+
 
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login')->middleware('web');
-
-// Rota de callback do Google
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
-
-// Rota inicial
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -70,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/blocked-days', [BlockedDayController::class, 'index']);
     Route::delete('/blocked-days/{blocked_day}', [BlockedDayController::class, 'destroy'])->name('blocked-days.destroy');
 });
+
 
 // Incluir rotas de autenticação padrão do Laravel
 require __DIR__ . '/auth.php';

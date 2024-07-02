@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+
+use App\Jobs\CheckEventsQueueJob;
 
 class EventController extends Controller
 {
@@ -14,6 +15,7 @@ class EventController extends Controller
         $events = Event::where('user_id', auth()->user()->id)->get();
         return response()->json($events);
     }
+
 
     public function store(Request $request)
     {

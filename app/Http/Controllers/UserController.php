@@ -21,4 +21,20 @@ class UserController extends Controller
 
     return response()->json(['message' => 'Agenda protection type updated successfully'], 200);
   }
+
+  public function verifyAccessToken($id, Request $request)
+  {
+    $request->validate([
+      'token' => 'required|string',
+    ]);
+
+    $user = User::findOrFail($id);
+
+    if ($user->permission_type !== 'protected' || $user->access_code !== $request->token) {
+      return response()->json(['error' => 'Access denied. Invalid token.'], 403);
+    }
+
+    $events = $user->events;
+    return response()->json($events);
+  }
 }

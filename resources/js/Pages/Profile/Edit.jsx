@@ -8,7 +8,7 @@ import axios from 'axios';
 
 export default function Edit({ auth, mustVerifyEmail, status }) {
     const [permissionType, setPermissionType] = useState(auth.user.permission_type);
-    const [accessCode, setAccessCode] = useState('');
+    const [accessCode, setAccessCode] = useState(auth.user.access_code || '');
 
     const handlePermissionTypeChange = (e) => {
         setPermissionType(e.target.value);

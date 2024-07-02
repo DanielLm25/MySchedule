@@ -1,24 +1,11 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import React from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import NotificationDisplay from '../Components/NotificationDisplay'; // Importe o componente de notificação
 
-export default function Dashboard({ auth }) {
-    const [eventCount, setEventCount] = useState(0);
-
-    useEffect(() => {
-        const fetchEventCount = async () => {
-            try {
-                const response = await axios.get('/event-count'); // Endpoint para consultar eventos
-                setEventCount(response.data.count); // Atualiza o estado com o número de eventos recebidos
-            } catch (error) {
-                console.error('Erro ao buscar eventos:', error);
-            }
-        };
-
-        fetchEventCount();
-    }, []);
-
+const Dashboard = ({ auth }) => {
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -30,10 +17,21 @@ export default function Dashboard({ auth }) {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900">You're logged in!</div>
-                        <p>Total Events: {eventCount}</p>
+                    </div>
+                </div>
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-8">
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                        <div className="p-6 bg-white border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-800">Event List</h2>
+                        </div>
+                        <div className="p-6">
+                            <NotificationDisplay /> {/* Renderiza o componente de notificação */}
+                        </div>
                     </div>
                 </div>
             </div>
         </AuthenticatedLayout>
     );
-}
+};
+
+export default Dashboard;
