@@ -19,6 +19,13 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
+        // Verifica manualmente se o user_id existe na tabela users
+        $targetUser = User::find($request->input('user_id'));
+
+        if (!$targetUser) {
+            return response()->json(['error' => 'Usuário não encontrado.'], 404);
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -28,21 +35,10 @@ class EventController extends Controller
             'recurrence' => 'nullable|string',
             'days_of_week' => 'nullable|array',
             'days_of_week.*' => 'integer|min:0|max:6',
-            'user_id' => 'required|exists:users,id', // Validar user_id
+            'user_id' => 'required|exists:users,id', // Validar user_id após verificação
         ]);
 
-        // Recuperar o usuário cuja agenda estamos visualizando (user2)
-        $targetUser = User::findOrFail($validated['user_id']);
-
-        // Verificar se o usuário autenticado pode criar eventos na agenda do usuário alvo (user2)
-        if (!$this->canCreateEventInUserAgenda(auth()->user(), $targetUser)) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        // Adicionar o user_id do usuário alvo (user2) ao evento a ser criado
-        $validated['user_id'] = $targetUser->id;
-
-        // Cria o evento associado ao usuário alvo (user2)
+        // Agora, $validated['user_id'] deve conter um ID válido, então podemos criar o evento
         $event = Event::create($validated);
 
         return response()->json($event, 201);
@@ -104,6 +100,7 @@ class EventController extends Controller
                 return $authUser->id === $targetUser->id;
             case 'protected':
                 // Verificar se o usuário autenticado está autorizado a criar eventos
+                // usando a tabela authorized_user
                 return $this->userIsAuthorizedForProtectedAgenda($authUser, $targetUser);
             default:
                 return false;

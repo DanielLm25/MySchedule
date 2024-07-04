@@ -157,14 +157,22 @@ export default function Agenda({ auth }) {
 
   const handleAddEvent = async (newEvent) => {
     try {
+      // Formata a data para o formato esperado pelo backend
       const formattedDate = selectedDate.toISOString().split('T')[0];
 
-      newEvent.user_id = selectedUser ? selectedUser.id : null;
+      // Define o user_id com base no usuário selecionado ou no usuário autenticado
+      newEvent.user_id = selectedUser;
+
+      // Adiciona a data formatada ao evento
       newEvent.date = formattedDate;
 
+      console.log("Evento a ser adicionado:", newEvent);
+
+      // Envia a requisição POST para adicionar o evento
       const response = await axios.post('/events', newEvent);
       const addedEvent = response.data;
 
+      // Formata o evento adicionado conforme necessário
       const formattedEvent = {
         id: addedEvent.id,
         title: addedEvent.title,
@@ -176,14 +184,20 @@ export default function Agenda({ auth }) {
         days_of_week: addedEvent.days_of_week,
       };
 
+      // Atualiza os eventos no estado local
       const updatedEvents = [...events, formattedEvent];
       setEvents(updatedEvents);
+
+      // Salva os eventos atualizados no armazenamento local, se necessário
       saveEventsToLocalStorage(updatedEvents);
 
+      // Fecha os modais e atualiza a lista de eventos
       handleCloseModals();
-      fetchEvents();
+      fetchEvents(); // Dependendo da implementação, pode ser necessário ajustar essa função
+
     } catch (error) {
       console.error('Erro ao adicionar evento:', error);
+      // Tratamento de erro, se necessário
     }
   };
 

@@ -74,12 +74,18 @@ class SearchController extends Controller
                 return response()->json(['error' => 'Token de acesso não fornecido.'], 403);
             }
 
-            // Buscar o access_code do usuário alvo
+            // Buscar o access_code e a data de expiração do usuário alvo
             $accessCode = $user->access_code;
+            $accessCodeExpiresAt = $user->access_code_expires_at;
 
             // Verificar se o token fornecido corresponde ao access_code do usuário
             if ($request->input('token') !== $accessCode) {
                 return response()->json(['error' => 'Token de acesso inválido.'], 403);
+            }
+
+            // Verificar se o token ainda é válido (não expirou)
+            if ($accessCodeExpiresAt && now()->gt($accessCodeExpiresAt)) {
+                return response()->json(['error' => 'Token de acesso expirado.'], 403);
             }
 
             // Log para verificar o acesso bem-sucedido
@@ -88,6 +94,11 @@ class SearchController extends Controller
 
         // Carregar os eventos associados ao usuário
         $events = Event::where('user_id', $user->id)->get();
+
+        // Se nenhum evento for encontrado, retornar a agenda do usuário mesmo assim
+        if ($events->isEmpty()) {
+            return response()->json(['message' => 'Nenhum evento encontrado para este usuário.', 'user' => $user]);
+        }
 
         return response()->json($events);
     }

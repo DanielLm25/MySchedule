@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Modal, Button, Form } from 'react-bootstrap';
 
@@ -9,6 +9,11 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [token, setToken] = useState('');
   const [selectedUserForToken, setSelectedUserForToken] = useState(null);
+
+  useEffect(() => {
+    setSuggestions([]);
+    setSearchTerm('');
+  }, []);
 
   const handleSearchChange = async (event) => {
     const term = event.target.value.trim();
@@ -34,10 +39,20 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
     if (selectedItem.type === 'event') {
       // Tratar clique em evento aqui se necessário
     } else if (selectedItem.type === 'user') {
+      setSelectedUser(selectedItem.data.id);
+
       if (selectedItem.data.permission_type === 'protected') {
-        // Solicitar token imediatamente se o usuário tem agenda protegida
-        setShowTokenModal(true);
         setSelectedUserForToken(selectedItem.data);
+
+        // Verificar se há token armazenado no localStorage para este usuário
+        const storedToken = localStorage.getItem(`agendaAccessToken_${selectedItem.data.id}`);
+        if (storedToken && storedToken === selectedItem.data.access_code) {
+          // Se o token armazenado for válido, acessar diretamente a agenda
+          accessUserAgenda(selectedItem.data.id, storedToken);
+        } else {
+          // Caso contrário, exibir o modal para inserir o token
+          setShowTokenModal(true);
+        }
       } else {
         // Acessar agenda normalmente se não for protegida
         accessUserAgenda(selectedItem.data.id);
@@ -48,11 +63,26 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
     setSuggestions([]);
   };
 
-  const accessUserAgenda = async (userId) => {
+  const accessUserAgenda = async (userId, storedToken = null) => {
     try {
-      const response = await axios.get(`/user/${userId}/agenda`);
-      setEvents(response.data);
-      setSelectedUser(userId);
+      const response = await axios.get(`/user/${userId}/agenda`, {
+        params: { token: storedToken }
+      });
+
+      if (response.data && response.data.message) {
+        console.log('Nenhum evento encontrado:', response.data);
+        setEvents([]);
+        setError(response.data.message);
+      } else {
+        console.log('Eventos carregados:', response.data);
+        setEvents(response.data);
+        setError(null);
+
+        // Armazenar o token no localStorage se não estiver armazenado ou for diferente
+        if (selectedUserForToken && (!storedToken || storedToken !== selectedUserForToken.access_code)) {
+          localStorage.setItem(`agendaAccessToken_${userId}`, selectedUserForToken.access_code);
+        }
+      }
     } catch (error) {
       console.error('Erro ao carregar agenda do usuário:', error);
       setError('Erro ao carregar agenda do usuário. Por favor, tente novamente mais tarde.');
@@ -61,20 +91,23 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
 
   const handleTokenSubmit = async () => {
     setShowTokenModal(false);
+
     try {
       const response = await axios.get(`/user/${selectedUserForToken.id}/agenda`, {
         params: { token }
       });
 
-      // Verificar se a resposta contém eventos válidos
-      if (response.data.length > 0) {
-        console.log('Resposta do backend:', response.data);
-        setEvents(response.data);
-        setSelectedUser(selectedUserForToken.id);
-        setToken('');
+      if (response.data && response.data.message) {
+        console.log('Nenhum evento encontrado:', response.data);
+        setEvents([]);
+        setError(response.data.message);
       } else {
-        console.error('Nenhum evento encontrado para o usuário:', selectedUserForToken);
-        setError('Nenhum evento encontrado para o usuário.');
+        console.log('Eventos carregados:', response.data);
+        setEvents(response.data);
+        setError(null);
+
+        // Armazenar o token no localStorage
+        localStorage.setItem(`agendaAccessToken_${selectedUserForToken.id}`, token);
       }
     } catch (error) {
       console.error('Erro ao carregar agenda do usuário:', error);

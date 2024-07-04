@@ -62,14 +62,17 @@ class ProfileController extends Controller
         // Se o tipo de permissão for 'protected', gerar um código de acesso único
         if ($request->permission_type === 'protected') {
             $user->access_code = strtoupper(Str::random(8)); // Gerar um código de acesso aleatório (exemplo)
+            $user->access_code_expires_at = now()->addHours(1); // Definir expiração para 1 hora após agora
         } else {
             $user->access_code = null; // Limpar o código de acesso se não for 'protected'
+            $user->access_code_expires_at = null; // Limpar a expiração
         }
 
         $user->save(); // O Laravel gerenciará automaticamente updated_at e created_at
 
         return response()->json(['access_code' => $user->access_code], 200);
     }
+
 
     /**
      * Delete the user's account.
