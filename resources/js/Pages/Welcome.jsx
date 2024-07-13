@@ -58,7 +58,7 @@ export default function Welcome({ auth }) {
                         <div className="flex justify-between items-center py-4 border-b border-gray-300">
                             <div className="flex items-center space-x-2">
                                 <FaUserCircle className="text-3xl text-white" />
-                                <h1 className="text-xl font-bold text-white">Welcome</h1>
+                                <h1 className="text-2xl font-bold text-white">Welcome</h1>
                             </div>
                             <nav className="flex space-x-4">
                                 {auth.user ? (
@@ -73,14 +73,14 @@ export default function Welcome({ auth }) {
                                     <>
                                         <Link
                                             href={route('login')}
-                                            className="flex items-center space-x-1 text-white text-sm px-3 py-2 rounded-md transition duration-300 hover:text-[#4D4DFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                            className="flex items-center space-x-1 text-white text-xl px-3 py-2 rounded-md transition duration-300 hover:text-[#4D4DFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                         >
                                             <FaSignInAlt />
-                                            <span>Log in</span>
+                                            <span >Log in</span>
                                         </Link>
                                         <Link
                                             href={route('register')}
-                                            className="flex items-center space-x-1 text-white text-sm px-3 py-2 rounded-md transition duration-300 hover:text-[#4D4DFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                            className="flex items-center space-x-1 text-white text-xl px-3 py-2 rounded-md transition duration-300 hover:text-[#4D4DFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                         >
                                             <FaUserPlus />
                                             <span>Register</span>

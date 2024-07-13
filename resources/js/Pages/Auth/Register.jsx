@@ -4,7 +4,7 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FaUser, FaEnvelope, FaLock, FaUserFriends } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock, FaUserFriends, FaHome } from 'react-icons/fa';
 
 export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -36,6 +36,12 @@ export default function Register() {
             <Head title="Register" />
 
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-700 to-blue-900">
+                <div className="absolute top-4 left-4">
+                    <Link href="/" className="text-blue-200 hover:text-blue-900 focus:outline-none">
+                        <FaHome className="text-5xl" />
+                    </Link>
+                </div>
+
                 <div className="max-w-lg w-full bg-gray-100 p-8 rounded-lg shadow-xl">
                     <h2 className="text-6xl font-bold text-center text-blue-800 mb-10">Create Your Account</h2>
 
@@ -130,7 +136,7 @@ export default function Register() {
                                 </Link>
                             </div>
 
-                            <PrimaryButton className="bg-blue-800 hover:bg-blue-900 text-white rounded-full shadow-md text-lg flex items-center justify-center w-full max-w-[180px] py-4 text-xl" disabled={processing} style={{ fontSize: '1rem' }}>
+                            <PrimaryButton className="w-30 ml-[125px] bg-blue-600 hover:bg-gradient-to-r hover:from-blue-800 hover:to-blue-800 text-white py-4 rounded-full shadow-lg text-xl flex items-center justify-center transition-all duration-300 ease-in-out transform hover:scale-105" disabled={processing} style={{ fontSize: '1.3rem' }}>
                                 {processing ? 'Signing up...' : 'Sign Up'}
                             </PrimaryButton>
                         </div>
