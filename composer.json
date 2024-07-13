@@ -9,6 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.8",
         "inertiajs/inertia-laravel": "^1.0",
         "kreait/firebase-php": "^7.12",
         "laravel/framework": "^11.0",
@@ -19,6 +20,8 @@
         "laravel/tinker": "^2.9",
         "livewire/livewire": "^3.5",
         "predis/predis": "^2.0",
+        "symfony/http-client": "^7.1",
+        "symfony/mailgun-mailer": "^7.1",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
