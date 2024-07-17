@@ -12,14 +12,14 @@ export default function BlockDaysModal({
 }) {
   const [blockData, setBlockData] = useState({
     type: 'specific',
-    specific_date: '', // Inicializa como specific_date
-    start_date: '',    // Inicializa como start_date
+    specific_date: '',
+    start_date: '', // Adicionando uma data inicial padrão
     end_date: '',
     recurring_days: [],
-    reason: '', // Inicialmente vazio
+    reason: '',
     user_id: null,
+    specific_dates: [],
   });
-
 
   useEffect(() => {
     if (selectedUser) {
@@ -30,8 +30,8 @@ export default function BlockDaysModal({
     }
   }, [selectedUser]);
 
-
   const [selectedOption, setSelectedOption] = useState('specific');
+  const [errors, setErrors] = useState({});
 
   const handleOptionChange = (e) => {
     const { value } = e.target;
@@ -41,35 +41,42 @@ export default function BlockDaysModal({
     setBlockData((prevBlockData) => ({
       ...prevBlockData,
       type: value,
-      specific_date: '',
-      start_date: '',
+      specific_date: '', // Limpar data específica ao mudar a opção
+      start_date: '', // Limpar start_date ao mudar a opção
       end_date: '',
       recurring_days: [],
-      reason: '', // Limpar reason ao mudar a opção, se necessário
-      user_id: selectedUser ? selectedUser.id : prevBlockData.user_id, // Manter o user_id existente
+      reason: '',
+      user_id: selectedUser ? selectedUser.id : prevBlockData.user_id,
+      specific_dates: [],
     }));
   };
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBlockData((prevBlockData) => ({
       ...prevBlockData,
-      [name]: value, // Isso assume que o nome é 'start_date'
+      [name]: value,
     }));
-  };
 
-
-  const handleDaySelect = (day) => {
-    if (blockData.recurring_days.includes(day)) {
+    // Preencher start_date com specific_date se type for 'specific'
+    if (name === 'specific_date' && blockData.type === 'specific') {
       setBlockData((prevBlockData) => ({
         ...prevBlockData,
-        recurring_days: prevBlockData.recurring_days.filter((d) => d !== day),
+        start_date: value,
+      }));
+    }
+  };
+
+  const handleDaySelect = (day) => {
+    if (blockData.specific_dates.includes(day)) {
+      setBlockData((prevBlockData) => ({
+        ...prevBlockData,
+        specific_dates: prevBlockData.specific_dates.filter((d) => d !== day),
       }));
     } else {
       setBlockData((prevBlockData) => ({
         ...prevBlockData,
-        recurring_days: [...prevBlockData.recurring_days, day],
+        specific_dates: [...prevBlockData.specific_dates, day],
       }));
     }
   };
@@ -77,19 +84,40 @@ export default function BlockDaysModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Verifique o estado de blockData antes de enviar
-    console.log('Submitting block data:', blockData);
+    // Validar se specific_dates está vazio se a opção específica estiver selecionada
+    if (selectedOption === 'specific' && !blockData.specific_date) {
+      setErrors({ specific_date: 'Selecione uma data específica.' });
+      return;
+    }
 
     try {
-      const response = await axios.post('/blocked-days', blockData);
-      console.log('Response:', response.data); // Log da resposta do backend
+      // Validar se start_date está preenchido se a opção for range ou recurring
+      if ((selectedOption === 'range' || selectedOption === 'recurring') && !blockData.start_date) {
+        setErrors({ start_date: 'A data de início é necessária.' });
+        return;
+      }
+
+      // Prepara os dados a serem enviados
+      const requestData = {
+        type: blockData.type,
+        start_date: blockData.start_date,
+        end_date: blockData.end_date,
+        recurring_days: blockData.recurring_days,
+        reason: blockData.reason,
+        user_id: blockData.user_id,
+        specific_dates: blockData.specific_dates,
+        specific_date: blockData.specific_date,
+      };
+
+      const response = await axios.post('/blocked-days', requestData);
+
+      console.log('Response:', response.data);
       onBlockDays(response.data);
       onClose();
     } catch (error) {
-      console.error('Erro ao bloquear dias:', error);
+      console.error('Error blocking days:', error.response ? error.response.data : error.message);
     }
   };
-
 
   return (
     <Transition.Root show={show} as={Fragment}>
@@ -136,14 +164,17 @@ export default function BlockDaysModal({
                   </div>
                   {selectedOption === 'specific' && (
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700">Data Específica</label>
+                      <label className="block text-sm font-medium text-gray-700">Selecione a Data</label>
                       <input
                         type="date"
-                        name="start_date"
+                        name="specific_date"
                         value={blockData.specific_date}
                         onChange={handleInputChange}
                         className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                       />
+                      {errors.specific_date && (
+                        <p className="mt-1 text-sm text-red-600">{errors.specific_date}</p>
+                      )}
                     </div>
                   )}
                   {selectedOption === 'range' && (
@@ -157,6 +188,9 @@ export default function BlockDaysModal({
                           onChange={handleInputChange}
                           className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                         />
+                        {errors.start_date && (
+                          <p className="mt-1 text-sm text-red-600">{errors.start_date}</p>
+                        )}
                       </div>
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700">Data de Fim</label>
@@ -181,6 +215,9 @@ export default function BlockDaysModal({
                           onChange={handleInputChange}
                           className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                         />
+                        {errors.start_date && (
+                          <p className="mt-1 text-sm text-red-600">{errors.start_date}</p>
+                        )}
                       </div>
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700">Dias da Semana</label>
@@ -189,10 +226,11 @@ export default function BlockDaysModal({
                             <label key={index} className="flex items-center">
                               <input
                                 type="checkbox"
-                                value={index}
-                                checked={blockData.recurring_days.includes(index)}
-                                onChange={() => handleDaySelect(index)}
-                                className="form-checkbox"
+                                name="recurring_days"
+                                value={day}
+                                checked={blockData.recurring_days.includes(day)}
+                                onChange={() => handleRecurringDayToggle(index)}
+                                className="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded"
                               />
                               <span className="ml-2 text-sm text-gray-700">{day}</span>
                             </label>
@@ -201,25 +239,20 @@ export default function BlockDaysModal({
                       </div>
                     </div>
                   )}
-                </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">Motivo do Bloqueio</label>
-                  <input
-                    type="text"
-                    name="reason"
-                    value={blockData.reason}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-
-                <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                  <SecondaryButton type="button" onClick={onClose}>
-                    Cancelar
-                  </SecondaryButton>
-                  <PrimaryButton type="submit">
-                    Salvar
-                  </PrimaryButton>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">Motivo do Bloqueio</label>
+                    <textarea
+                      name="reason"
+                      value={blockData.reason}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <SecondaryButton onClick={onClose}>Cancelar</SecondaryButton>
+                    <PrimaryButton type="submit">Confirmar</PrimaryButton>
+                  </div>
                 </div>
               </form>
             </div>

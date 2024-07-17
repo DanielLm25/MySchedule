@@ -63,11 +63,11 @@ export default function Welcome({ auth }) {
                             <nav className="flex space-x-4">
                                 {auth.user ? (
                                     <Link
-                                        href={route('dashboard')}
-                                        className="flex items-center space-x-1 text-white text-sm px-3 py-2 rounded-md transition duration-300 hover:bg-white hover:text-[#FF2D20] focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                        href={route('agenda')}
+                                        className="flex items-center space-x-1 text-white text-xl px-3 py-2 rounded-md transition duration-300 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                     >
-                                        <FaTachometerAlt />
-                                        <span>Dashboard</span>
+                                        <FaUserFriends />
+                                        <span>Agenda</span>
                                     </Link>
                                 ) : (
                                     <>

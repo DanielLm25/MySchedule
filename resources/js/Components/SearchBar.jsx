@@ -39,7 +39,7 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
     if (selectedItem.type === 'event') {
       // Tratar clique em evento aqui se necessário
     } else if (selectedItem.type === 'user') {
-      setSelectedUser(selectedItem.data.id);
+      setSelectedUser(selectedItem.data); // Atualiza o estado selectedUser
 
       if (selectedItem.data.permission_type === 'protected') {
         setSelectedUserForToken(selectedItem.data);
@@ -152,7 +152,11 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
           <Button variant="secondary" onClick={() => setShowTokenModal(false)}>
             Fechar
           </Button>
-          <Button variant="primary" onClick={handleTokenSubmit} disabled={!token || token !== selectedUserForToken.access_code}>
+          <Button
+            variant="primary"
+            onClick={handleTokenSubmit}
+            disabled={!token || token !== selectedUserForToken.access_code}
+          >
             Confirmar
           </Button>
         </Modal.Footer>
