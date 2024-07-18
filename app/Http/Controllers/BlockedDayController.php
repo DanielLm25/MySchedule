@@ -16,13 +16,15 @@ class BlockedDayController extends Controller
      */
     public function index(Request $request)
     {
-        $userId = Auth::id(); // Obtém o ID do usuário autenticado
+        // Obter o user_id da requisição ou usar o ID do usuário autenticado
+        $userId = $request->query('user_id', Auth::id());
 
-        // Recupere os dias bloqueados apenas para o usuário autenticado
+        // Recuperar os dias bloqueados para o user_id fornecido
         $blockedDays = BlockedDay::where('user_id', $userId)->get();
 
         return response()->json($blockedDays);
     }
+
 
     /**
      * Armazena um novo dia bloqueado.

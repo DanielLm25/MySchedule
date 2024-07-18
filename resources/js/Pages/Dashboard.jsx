@@ -7,16 +7,10 @@ import NotificationDisplay from '../Components/NotificationDisplay'; // Importe 
 
 const Dashboard = ({ auth }) => {
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-        >
-            <Head title="Dashboard2" />
+        <AuthenticatedLayout user={auth.user} showAgenda={true}>
+            <Head title="Dashboard" />
 
-            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
-            </div>
             <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-8">
-
                 <div className="">
                     <NotificationDisplay /> {/* Renderiza o componente de notificação */}
                 </div>

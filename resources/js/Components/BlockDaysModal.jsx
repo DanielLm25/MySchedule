@@ -7,13 +7,13 @@ import SecondaryButton from './SecondaryButton';
 export default function BlockDaysModal({
   show = false,
   onClose = () => { },
-  onBlockDays = () => { },
+  fetchBlockedDays, // Função para buscar os dias bloqueados
   selectedUser,
 }) {
   const [blockData, setBlockData] = useState({
     type: 'specific',
     specific_date: '',
-    start_date: '', // Adicionando uma data inicial padrão
+    start_date: '',
     end_date: '',
     recurring_days: [],
     reason: '',
@@ -41,8 +41,8 @@ export default function BlockDaysModal({
     setBlockData((prevBlockData) => ({
       ...prevBlockData,
       type: value,
-      specific_date: '', // Limpar data específica ao mudar a opção
-      start_date: '', // Limpar start_date ao mudar a opção
+      specific_date: '',
+      start_date: '',
       end_date: '',
       recurring_days: [],
       reason: '',
@@ -81,6 +81,21 @@ export default function BlockDaysModal({
     }
   };
 
+  const handleRecurringDayToggle = (index) => {
+    const day = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'][index];
+    if (blockData.recurring_days.includes(day)) {
+      setBlockData((prevBlockData) => ({
+        ...prevBlockData,
+        recurring_days: prevBlockData.recurring_days.filter((d) => d !== day),
+      }));
+    } else {
+      setBlockData((prevBlockData) => ({
+        ...prevBlockData,
+        recurring_days: [...prevBlockData.recurring_days, day],
+      }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -112,7 +127,10 @@ export default function BlockDaysModal({
       const response = await axios.post('/blocked-days', requestData);
 
       console.log('Response:', response.data);
-      onBlockDays(response.data);
+
+      // Chama a função para buscar os dias bloqueados após adicionar novos bloqueios
+      fetchBlockedDays();
+
       onClose();
     } catch (error) {
       console.error('Error blocking days:', error.response ? error.response.data : error.message);
@@ -220,39 +238,43 @@ export default function BlockDaysModal({
                         )}
                       </div>
                       <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Dias da Semana</label>
-                        <div className="mt-2 grid grid-cols-3 gap-2">
+                        <span className="block text-sm font-medium text-gray-700 mb-1">Dias da Semana</span>
+                        <div className="flex flex-wrap gap-4">
                           {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map((day, index) => (
-                            <label key={index} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                name="recurring_days"
-                                value={day}
-                                checked={blockData.recurring_days.includes(day)}
-                                onChange={() => handleRecurringDayToggle(index)}
-                                className="form-checkbox h-5 w-5 text-indigo-600 border-gray-300 rounded"
-                              />
-                              <span className="ml-2 text-sm text-gray-700">{day}</span>
-                            </label>
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleRecurringDayToggle(index)}
+                              className={`px-3 py-1 text-sm rounded-md focus:outline-none ${blockData.recurring_days.includes(day)
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                              {day}
+                            </button>
                           ))}
                         </div>
                       </div>
                     </div>
                   )}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Motivo do Bloqueio</label>
+                    <label className="block text-sm font-medium text-gray-700">Motivo</label>
                     <textarea
                       name="reason"
                       value={blockData.reason}
                       onChange={handleInputChange}
-                      rows={3}
                       className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                      rows="3"
                     />
                   </div>
-                  <div className="mt-4 flex justify-end">
-                    <SecondaryButton onClick={onClose}>Cancelar</SecondaryButton>
-                    <PrimaryButton type="submit">Confirmar</PrimaryButton>
-                  </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <SecondaryButton onClick={onClose} type="button">
+                    Cancelar
+                  </SecondaryButton>
+                  <PrimaryButton type="submit" className="ml-2">
+                    Bloquear Dias
+                  </PrimaryButton>
                 </div>
               </form>
             </div>

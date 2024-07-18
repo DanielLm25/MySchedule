@@ -6,13 +6,10 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link } from '@inertiajs/react';
 import NotificationDisplay from '@/Components/NotificationDisplay';
 import { FaUserCircle, FaAngleDown } from 'react-icons/fa';
-
-// Importe o componente SearchBar
 import SearchBar from '../Components/SearchBar';
-// Importe o componente Agenda
 import Agenda from '../Pages/Agenda'; // Verifique o caminho correto para Agenda.jsx
 
-export default function AuthenticatedLayout({ user, children, selectedUser }) {
+export default function AuthenticatedLayout({ user, children, selectedUser, showAgenda }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [events, setEvents] = useState([]); // Estado para armazenar os eventos
     const [selectedUserState, setSelectedUserState] = useState(selectedUser); // Estado local para armazenar o selectedUser
@@ -61,7 +58,6 @@ export default function AuthenticatedLayout({ user, children, selectedUser }) {
                         </div>
 
                         <div className="hidden sm:flex sm:items-center sm:ml-6">
-                            {/* Passando setEvents e setSelectedUser para o SearchBar */}
                             <SearchBar setEvents={setEvents} setSelectedUser={setSelectedUser} />
 
                             <div className="ml-3 relative">
@@ -116,8 +112,12 @@ export default function AuthenticatedLayout({ user, children, selectedUser }) {
                 </div>
             </nav>
 
-
-
-            <Agenda auth={{ user }} selectedUser={selectedUserState} setSelectedUser={setSelectedUser} />        </div>
+            <main>
+                {showAgenda && (
+                    <Agenda auth={{ user }} selectedUser={selectedUserState} setSelectedUser={setSelectedUser} />
+                )}
+                {children}
+            </main>
+        </div>
     );
 }

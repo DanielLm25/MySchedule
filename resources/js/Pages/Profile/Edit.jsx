@@ -1,8 +1,9 @@
+import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head } from '@inertiajs/react';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import DeleteUserForm from './Partials/DeleteUserForm';
-import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import axios from 'axios';
 
@@ -28,10 +29,7 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Profile</h2>}
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Profile" />
 
             <div className="py-12">
@@ -63,16 +61,24 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                             <option value="public">Public</option>
                             <option value="protected">Protected</option>
                         </select>
-                        {accessCode && (
-                            <p className="mt-4 text-gray-700">
-                                Access Code: {accessCode}
-                            </p>
+
+                        {permissionType === 'protected' && (
+                            <div className="mt-4">
+                                <label className="block font-medium text-gray-700">Access Code</label>
+                                <input
+                                    type="text"
+                                    value={accessCode}
+                                    readOnly
+                                    className="mt-1 block w-full p-2 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                />
+                            </div>
                         )}
+
                         <button
                             onClick={handleSavePermissionType}
-                            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:ring focus:ring-indigo-200 active:bg-indigo-600 disabled:opacity-25 transition"
                         >
-                            Save Permission Type
+                            Save
                         </button>
                     </div>
                 </div>

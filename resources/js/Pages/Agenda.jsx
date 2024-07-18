@@ -6,6 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 import Modal from '../Components/Modal';
 import BlockDaysModal from '../Components/BlockDaysModal';
+import BlockedDayModal from '../Components/BlockedDayModal';
 
 export default function Agenda({ auth, selectedUser }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -19,43 +20,66 @@ export default function Agenda({ auth, selectedUser }) {
   const [eventsForSelectedDate, setEventsForSelectedDate] = useState([]);
   const [blockedDays, setBlockedDays] = useState([]);
   const [selectedBlockedDay, setSelectedBlockedDay] = useState(null);
+  const [isBlockedDayModalOpen, setIsBlockedDayModalOpen] = useState(false);
+
+
 
   const currentUser = selectedUser || auth.user;
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      fetchEvents(currentUser.id);
-      fetchBlockedDays(currentUser.id);
+    if (selectedUser && selectedUser.id !== auth.user.id) {
+      fetchEvents(selectedUser.id);
+      fetchBlockedDays(selectedUser.id);
+    } else if (auth.user && auth.user.id) {
+      fetchEvents(auth.user.id);
+      fetchBlockedDays(auth.user.id);
     }
-  }, [currentUser, auth.user]);
+  }, [selectedUser, auth.user]);
+
 
   const fetchEvents = async (userId) => {
     try {
-      const response = await axios.get(`/events?user_id=${userId}`);
-      setEvents(response.data);
-      localStorage.setItem('events', JSON.stringify(response.data));
+      const response = await axios.get(`/user/${userId}/agenda`);
+      if (response.data && response.data.length > 0) {
+        console.log('Eventos recuperados:', response.data);
+        setEvents(response.data);
+        setError(null);
+      } else {
+        console.log('Nenhum evento encontrado.');
+        setEvents([]);
+      }
     } catch (error) {
-      console.error('Erro ao buscar eventos:', error.response || error.message || error);
-      setError('Falha ao carregar eventos. Por favor, tente novamente mais tarde.');
+      console.error('Erro ao carregar eventos:', error);
+      setError('Erro ao carregar eventos. Por favor, tente novamente mais tarde.');
     }
   };
 
+
   const fetchBlockedDays = async (userId) => {
     try {
+      console.log('Fetching blocked days for user ID:', userId);
       const response = await axios.get(`/blocked-days?user_id=${userId}`);
-      setBlockedDays(response.data);
+      console.log('Dias bloqueados recebidos:', response.data);
+      if (Array.isArray(response.data)) {
+        setBlockedDays(response.data);
+      } else {
+        console.error('Resposta não é um array:', response.data);
+        setBlockedDays([]);
+      }
     } catch (error) {
-      console.error('Erro ao buscar dias bloqueados:', error.response || error.message || error);
+      console.error('Erro ao buscar dias bloqueados:', error);
       setError('Falha ao carregar dias bloqueados. Por favor, tente novamente mais tarde.');
     }
   };
+
+
+
 
   const handleDateClick = (info) => {
     const clickedDateUTC = new Date(info.date);
     const clickedDateStr = clickedDateUTC.toISOString().slice(0, 10);
 
     const clickedBlockedDay = blockedDays.find((day) => {
-      // Verifica se o dia bloqueado pertence ao usuário selecionado
       return day.user_id === currentUser.id && (
         (day.type === "specific" && day.start_date === clickedDateStr) ||
         (day.type === "range" && clickedDateStr >= day.start_date && clickedDateStr <= day.end_date) ||
@@ -65,6 +89,7 @@ export default function Agenda({ auth, selectedUser }) {
 
     if (clickedBlockedDay) {
       setSelectedBlockedDay(clickedBlockedDay);
+      setIsBlockedDayModalOpen(true);
     } else {
       const eventsForClickedDate = events.filter((event) => {
         if (!event.recurrence || event.recurrence === "none") {
@@ -93,7 +118,6 @@ export default function Agenda({ auth, selectedUser }) {
       setIsInitialModalOpen(true);
     }
   };
-
 
   const handleSelectEvent = (event) => {
     setSelectedDate(new Date(event.date));
@@ -169,22 +193,21 @@ export default function Agenda({ auth, selectedUser }) {
       setEvents(updatedEvents);
       saveEventsToLocalStorage(updatedEvents);
       handleCloseModals();
-      fetchEvents(); // Dependendo da implementação, pode ser necessário ajustar essa função
+      fetchEvents(currentUser.id); // Passa o user_id correto para atualizar os eventos
     } catch (error) {
       console.error('Erro ao adicionar evento:', error.response || error.message || error);
       if (error.response && error.response.data && error.response.data.errors) {
         const { errors } = error.response.data;
-        // Exemplo de como você pode exibir os erros no console de forma mais explícita
         Object.keys(errors).forEach(field => {
           console.error(`${field}: ${errors[field].join(', ')}`);
         });
-        // Exemplo de como você pode definir o estado de erro para exibir uma mensagem ao usuário
         setError('Falha ao adicionar evento. Verifique os campos e tente novamente.');
       } else {
         setError('Erro ao adicionar evento. Por favor, tente novamente mais tarde.');
       }
     }
   };
+
 
   const handleDeleteEvent = async (eventId) => {
     try {
@@ -208,7 +231,7 @@ export default function Agenda({ auth, selectedUser }) {
     setIsBlockDaysModalOpen(false);
   };
   return (
-    <div className="py-12">
+    <div className="">
       <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
           <div className="p-6 text-gray-900">
@@ -241,27 +264,29 @@ export default function Agenda({ auth, selectedUser }) {
                   right: 'dayGridMonth,timeGridWeek,timeGridDay',
                 }}
                 dateClick={handleDateClick}
-                events={events.filter(event => event.user_id === currentUser.id).map(event => {
-                  if (event.recurrence === 'daily') {
-                    return {
-                      ...event,
-                      startRecur: event.date,
-                      endRecur: event.endDate || '9999-12-31',
-                      startTime: event.time,
-                    };
-                  } else if (event.recurrence === 'weekly') {
-                    return {
-                      ...event,
-                      daysOfWeek: event.days_of_week,
-                      startTime: event.time,
-                    };
-                  } else {
-                    return {
-                      ...event,
-                      start: event.date + 'T' + event.time,
-                    };
-                  }
-                })}
+                events={events
+                  .filter(event => event.user_id === (currentUser ? currentUser.id : auth.user.id))
+                  .map(event => {
+                    if (event.recurrence === 'daily') {
+                      return {
+                        ...event,
+                        startRecur: event.date,
+                        endRecur: event.endDate || '9999-12-31',
+                        startTime: event.time,
+                      };
+                    } else if (event.recurrence === 'weekly') {
+                      return {
+                        ...event,
+                        daysOfWeek: event.days_of_week,
+                        startTime: event.time,
+                      };
+                    } else {
+                      return {
+                        ...event,
+                        start: event.date + 'T' + event.time,
+                      };
+                    }
+                  })}
                 editable={true}
                 selectable={true}
                 dayCellContent={(arg) => {
@@ -280,15 +305,26 @@ export default function Agenda({ auth, selectedUser }) {
                     return <>{arg.dayNumberText}</>;
                   }
                 }}
+
                 eventClick={(info) => handleSelectEvent(info.event)}
               />
+
+              {selectedBlockedDay && (
+                <BlockedDayModal
+                  show={isBlockedDayModalOpen}
+                  onClose={handleCloseModals}
+                  blockedDay={selectedBlockedDay}
+                  onBlockedDayChange={() => fetchBlockedDays(currentUser.id)}
+                  auth={auth}
+                  selectedUser={currentUser}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Modals */}
-
       <Modal
         show={isInitialModalOpen}
         onClose={handleCloseModals}
@@ -303,7 +339,6 @@ export default function Agenda({ auth, selectedUser }) {
         authUserId={auth.user.id} // ID do usuário autenticado
         selectedUser={currentUser} // Usuário selecionado para exibir na modal
       />
-
 
       <Modal
         show={isAddEventModalOpen}
@@ -323,12 +358,14 @@ export default function Agenda({ auth, selectedUser }) {
         onEditEvent={handleEditEvent}
         eventToEdit={eventToEdit}
       />
+
       <BlockDaysModal
         show={isBlockDaysModalOpen && auth.user.id === currentUser.id} // Somente mostra se o usuário autenticado for o proprietário da agenda
         onClose={closeBlockDaysModal}
         fetchBlockedDays={fetchBlockedDays}
         selectedUser={currentUser}
       />
+
     </div>
   );
-}
+}  
