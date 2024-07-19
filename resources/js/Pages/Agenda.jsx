@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -7,6 +7,7 @@ import axios from 'axios';
 import Modal from '../Components/Modal';
 import BlockDaysModal from '../Components/BlockDaysModal';
 import BlockedDayModal from '../Components/BlockedDayModal';
+import { FaPlus, FaLock, FaChevronLeft, FaChevronRight, FaCalendarDay } from 'react-icons/fa';
 
 export default function Agenda({ auth, selectedUser }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -22,9 +23,22 @@ export default function Agenda({ auth, selectedUser }) {
   const [selectedBlockedDay, setSelectedBlockedDay] = useState(null);
   const [isBlockedDayModalOpen, setIsBlockedDayModalOpen] = useState(false);
 
-
+  const calendarRef = useRef(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   const currentUser = selectedUser || auth.user;
+
+  useEffect(() => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      setCurrentDate(calendarApi.getDate());
+    }
+  }, []);
+
+  const handleDateChange = (date) => {
+    setCurrentDate(date);
+  };
+
 
   useEffect(() => {
     if (selectedUser && selectedUser.id !== auth.user.id) {
@@ -120,8 +134,33 @@ export default function Agenda({ auth, selectedUser }) {
   };
 
   const handleSelectEvent = (event) => {
-    setSelectedDate(new Date(event.date));
-    setEventsForSelectedDate([event]);
+    const clickedDateUTC = new Date(event.start);
+    const clickedDateStr = clickedDateUTC.toISOString().slice(0, 10);
+
+    const eventsForClickedDate = events.filter((e) => {
+      if (!e.recurrence || e.recurrence === "none") {
+        const eventDateUTC = new Date(e.date);
+        return (
+          eventDateUTC.toISOString().split("T")[0] ===
+          clickedDateUTC.toISOString().split("T")[0]
+        );
+      } else if (e.recurrence === "daily") {
+        const eventStartDateUTC = new Date(e.date);
+        const eventEndDateUTC = e.endDate
+          ? new Date(e.endDate)
+          : new Date("9999-12-31");
+        return (
+          clickedDateUTC >= eventStartDateUTC &&
+          clickedDateUTC <= eventEndDateUTC
+        );
+      } else if (e.recurrence === "weekly" && e.days_of_week) {
+        return e.days_of_week.includes(clickedDateUTC.getUTCDay());
+      }
+      return false;
+    });
+
+    setSelectedDate(new Date(clickedDateUTC.getTime()));
+    setEventsForSelectedDate(eventsForClickedDate);
     setIsInitialModalOpen(true);
   };
 
@@ -211,13 +250,23 @@ export default function Agenda({ auth, selectedUser }) {
 
   const handleDeleteEvent = async (eventId) => {
     try {
+      // Deleta o evento
       await axios.delete(`/events/${eventId}`);
-      fetchEvents();
+
+      // Atualiza a lista de eventos, excluindo o evento deletado
+      setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
+
+      // Atualiza os eventos para a data selecionada
       setEventsForSelectedDate(prevEvents => prevEvents.filter(event => event.id !== eventId));
+
+      // Recarrega os eventos do usuário atual
+      fetchEvents(currentUser.id);
     } catch (error) {
       console.error('Erro ao deletar evento:', error.response || error.message || error);
+      setError('Erro ao deletar evento. Por favor, tente novamente mais tarde.');
     }
   };
+
 
   const saveEventsToLocalStorage = (events) => {
     localStorage.setItem('events', JSON.stringify(events));
@@ -230,95 +279,143 @@ export default function Agenda({ auth, selectedUser }) {
   const closeBlockDaysModal = () => {
     setIsBlockDaysModalOpen(false);
   };
+
+
+
   return (
-    <div className="">
-      <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-          <div className="p-6 text-gray-900">
-            <div className="container mx-auto mt-4">
-              {/* Buttons and Calendar */}
-              {error && <div className="text-red-500">{error}</div>}
-              <div className="flex justify-between items-center mb-4">
+    <div className="min-h-screen bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400">
+      <div className="max-w-[1400px] mx-auto sm:px-2 md:px-4 lg:px-6 mt-2">
+        <div className="bg-gray-100 overflow-hidden shadow-md rounded-lg h-[calc(100vh-5rem)] "> {/* Ajusta a altura */}
+          <div className="text-gray-900 h-full flex flex-col">
+            <div className="flex flex-col md:flex-row h-full">
+              {/* Sidebar with Buttons */}
+              <div className="flex-shrink-0 w-full md:w-48 p-4 flex flex-col space-y-4 bg-blue-400"> {/* Reduz a largura e o padding */}
+                {error && (
+                  <div className="bg-red-100 border border-red-500 text-red-700 px-3 py-1 rounded-lg mb-4"> {/* Ajusta o padding e a margem */}
+                    {error}
+                  </div>
+                )}
+
                 <button
-                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                  className="flex items-center px-4 py-2 bg-blue-700 text-white rounded-lg shadow-md hover:bg-white hover:shadow-lg text-base transition-transform hover:scale-105 w-full hover:text-blue-700"
                   onClick={handleAddEventClick}
                 >
+                  <FaPlus className="mr-2 text-lg" />
                   Add Event
                 </button>
+
                 {auth.user.id === currentUser?.id && (
                   <button
-                    className="px-4 py-2 bg-red-500 text-white rounded"
+                    className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg shadow-md hover:bg-blue-900 hover:shadow-lg text-base transition-transform hover:scale-105 w-full"
                     onClick={openBlockDaysModal}
                   >
+                    <FaLock className="mr-2 text-lg" />
                     Block Days
                   </button>
                 )}
               </div>
 
-              <FullCalendar
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                headerToolbar={{
-                  left: 'prev,next today',
-                  center: 'title',
-                  right: 'dayGridMonth,timeGridWeek,timeGridDay',
-                }}
-                dateClick={handleDateClick}
-                events={events
-                  .filter(event => event.user_id === (currentUser ? currentUser.id : auth.user.id))
-                  .map(event => {
-                    if (event.recurrence === 'daily') {
-                      return {
-                        ...event,
-                        startRecur: event.date,
-                        endRecur: event.endDate || '9999-12-31',
-                        startTime: event.time,
-                      };
-                    } else if (event.recurrence === 'weekly') {
-                      return {
-                        ...event,
-                        daysOfWeek: event.days_of_week,
-                        startTime: event.time,
-                      };
-                    } else {
-                      return {
-                        ...event,
-                        start: event.date + 'T' + event.time,
-                      };
-                    }
-                  })}
-                editable={true}
-                selectable={true}
-                dayCellContent={(arg) => {
-                  const dateStr = arg.date.toISOString().slice(0, 10);
-                  const blockedDay = blockedDays.find((day) => {
-                    return day.user_id === currentUser.id && (
-                      (day.type === "specific" && day.start_date === dateStr) ||
-                      (day.type === "range" && dateStr >= day.start_date && dateStr <= day.end_date) ||
-                      (day.type === "recurring" && day.recurring_days.includes(arg.date.getUTCDay()))
-                    );
-                  });
+              {/* Calendar */}
+              <div className="flex-grow p-4 flex flex-col">
+                {/* Calendar Header */}
+                <div className="mb-4 flex justify-between items-center"> {/* Ajusta a margem */}
+                  <button
+                    className="flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform"
+                    onClick={() => calendarRef.current.getApi().prev()}
+                  >
+                    <FaChevronLeft className="mr-1 text-lg" />
+                    Prev
+                  </button>
 
-                  if (blockedDay) {
-                    return <span className="text-red-500">Bloqueado</span>;
-                  } else {
-                    return <>{arg.dayNumberText}</>;
-                  }
-                }}
+                  <button
+                    className="flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform"
+                    onClick={() => calendarRef.current.getApi().today()}
+                  >
+                    <FaCalendarDay className="mr-1 text-lg" />
+                    Today
+                  </button>
 
-                eventClick={(info) => handleSelectEvent(info.event)}
-              />
+                  <button
+                    className="flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform"
+                    onClick={() => calendarRef.current.getApi().next()}
+                  >
+                    <FaChevronRight className="mr-1 text-lg" />
+                    Next
+                  </button>
+                </div>
 
-              {selectedBlockedDay && (
-                <BlockedDayModal
-                  show={isBlockedDayModalOpen}
-                  onClose={handleCloseModals}
-                  blockedDay={selectedBlockedDay}
-                  onBlockedDayChange={() => fetchBlockedDays(currentUser.id)}
-                  auth={auth}
-                  selectedUser={currentUser}
-                />
-              )}
+                {/* Display Current Month and Year */}
+                <div className="mb-4 text-center text-xl font-semibold text-gray-800"> {/* Ajusta o tamanho do texto */}
+                  {currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}
+                </div>
+
+                {/* Calendar Component */}
+                <div className="flex-grow overflow-auto"> {/* Ajusta o tamanho do calendário */}
+                  <FullCalendar
+                    ref={calendarRef}
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                    initialView="dayGridMonth"
+                    headerToolbar={false} // Hide the default header
+                    dateClick={handleDateClick}
+                    events={events
+                      .filter(event => event.user_id === (currentUser ? currentUser.id : auth.user.id))
+                      .map(event => {
+                        if (event.recurrence === 'daily') {
+                          return {
+                            ...event,
+                            startRecur: event.date,
+                            endRecur: event.endDate || '9999-12-31',
+                            startTime: event.time,
+                          };
+                        } else if (event.recurrence === 'weekly') {
+                          return {
+                            ...event,
+                            daysOfWeek: event.days_of_week,
+                            startTime: event.time,
+                          };
+                        } else {
+                          return {
+                            ...event,
+                            start: event.date + 'T' + event.time,
+                          };
+                        }
+                      })}
+                    editable={true}
+                    selectable={true}
+                    dayCellContent={(arg) => {
+                      const dateStr = arg.date.toISOString().slice(0, 10);
+                      const blockedDay = blockedDays.find((day) => {
+                        return day.user_id === currentUser.id && (
+                          (day.type === "specific" && day.start_date === dateStr) ||
+                          (day.type === "range" && dateStr >= day.start_date && dateStr <= day.end_date) ||
+                          (day.type === "recurring" && day.recurring_days.includes(arg.date.getUTCDay()))
+                        );
+                      });
+
+                      if (blockedDay) {
+                        return (
+                          <span className="text-red-600 font-semibold">Blocked</span>
+                        );
+                      } else {
+                        return <>{arg.dayNumberText}</>;
+                      }
+                    }}
+                    eventClick={(info) => handleSelectEvent(info.event)}
+                    datesSet={(dateInfo) => handleDateChange(dateInfo.view.currentStart)}
+                  />
+                </div>
+
+                {selectedBlockedDay && (
+                  <BlockedDayModal
+                    show={true}
+                    onClose={() => setSelectedBlockedDay(null)}
+                    blockedDay={selectedBlockedDay}
+                    selectedUser={currentUser}
+                    authUserId={auth.user.id}
+                    fetchBlockedDays={fetchBlockedDays}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -336,8 +433,8 @@ export default function Agenda({ auth, selectedUser }) {
         onAddEvent={handleAddEventClick}
         eventsForSelectedDate={eventsForSelectedDate}
         fetchEvents={fetchEvents}
-        authUserId={auth.user.id} // ID do usuário autenticado
-        selectedUser={currentUser} // Usuário selecionado para exibir na modal
+        authUserId={auth.user.id}
+        selectedUser={currentUser}
       />
 
       <Modal
@@ -360,12 +457,11 @@ export default function Agenda({ auth, selectedUser }) {
       />
 
       <BlockDaysModal
-        show={isBlockDaysModalOpen && auth.user.id === currentUser.id} // Somente mostra se o usuário autenticado for o proprietário da agenda
+        show={isBlockDaysModalOpen && auth.user.id === currentUser.id}
         onClose={closeBlockDaysModal}
         fetchBlockedDays={fetchBlockedDays}
         selectedUser={currentUser}
       />
-
-    </div>
+    </div >
   );
-}  
+}

@@ -52,10 +52,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Rota para agenda
-    Route::middleware('auth')->get('/agenda', function () {
-        return Inertia::render('Agenda');
-    })->name('agenda'); // Definindo o nome da rota como 'agenda'
 
 
     // Recurso para EventController

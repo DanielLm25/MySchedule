@@ -1,32 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Modal, Button, Form } from 'react-bootstrap';
+import AccessTokenModal from '../Components/Modais/AcessToken';
+import NoAccessModal from '../Components/Modais/NoAcessModal';
 
 const SearchBar = ({ setEvents, setSelectedUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState(null);
-  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [showAccessTokenModal, setShowAccessTokenModal] = useState(false);
+  const [showNoAccessModal, setShowNoAccessModal] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState(null);
   const [token, setToken] = useState('');
-  const [selectedUserForToken, setSelectedUserForToken] = useState(null);
 
   useEffect(() => {
+    // Limpa sugestões e busca quando o componente é montado
     setSuggestions([]);
     setSearchTerm('');
   }, []);
 
   const handleSearchChange = async (event) => {
-    const term = event.target.value.trim();
-
+    const term = event.target.value;
     setSearchTerm(term);
 
-    if (term === '') {
+    if (term.trim() === '') {
       setSuggestions([]);
       return;
     }
 
     try {
-      const response = await axios.get(`/search?query=${term}`);
+      const response = await axios.get(`/search?query=${encodeURIComponent(term)}`);
       setSuggestions(response.data);
     } catch (error) {
       console.error('Erro ao buscar sugestões:', error);
@@ -36,26 +38,18 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
   };
 
   const handleSuggestionClick = async (selectedItem) => {
-    if (selectedItem.type === 'event') {
-      // Tratar clique em evento aqui se necessário
-    } else if (selectedItem.type === 'user') {
-      setSelectedUser(selectedItem.data); // Atualiza o estado selectedUser
+    if (selectedItem.type === 'user') {
+      const user = selectedItem.data;
+      setSelectedUserForModal(user);
 
-      if (selectedItem.data.permission_type === 'protected') {
-        setSelectedUserForToken(selectedItem.data);
-
-        // Verificar se há token armazenado no localStorage para este usuário
-        const storedToken = localStorage.getItem(`agendaAccessToken_${selectedItem.data.id}`);
-        if (storedToken && storedToken === selectedItem.data.access_code) {
-          // Se o token armazenado for válido, acessar diretamente a agenda
-          accessUserAgenda(selectedItem.data.id, storedToken);
-        } else {
-          // Caso contrário, exibir o modal para inserir o token
-          setShowTokenModal(true);
-        }
+      if (user.permission_type === 'protected') {
+        setShowAccessTokenModal(true);
+      } else if (user.permission_type === 'private') {
+        setShowNoAccessModal(true);
       } else {
-        // Acessar agenda normalmente se não for protegida
-        accessUserAgenda(selectedItem.data.id);
+        // Se a agenda não for protegida nem privada, carrega a agenda diretamente e passa o usuário selecionado
+        setSelectedUser(user);
+        accessUserAgenda(user.id);
       }
     }
 
@@ -63,25 +57,18 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
     setSuggestions([]);
   };
 
-  const accessUserAgenda = async (userId, storedToken = null) => {
+  const accessUserAgenda = async (userId, token = null) => {
     try {
       const response = await axios.get(`/user/${userId}/agenda`, {
-        params: { token: storedToken }
+        params: { token }
       });
 
-      if (response.data && response.data.message) {
-        console.log('Nenhum evento encontrado:', response.data);
+      if (response.data && response.data.error) {
+        setError(response.data.error);
         setEvents([]);
-        setError(response.data.message);
       } else {
-        console.log('Eventos carregados:', response.data);
         setEvents(response.data);
         setError(null);
-
-        // Armazenar o token no localStorage se não estiver armazenado ou for diferente
-        if (selectedUserForToken && (!storedToken || storedToken !== selectedUserForToken.access_code)) {
-          localStorage.setItem(`agendaAccessToken_${userId}`, selectedUserForToken.access_code);
-        }
       }
     } catch (error) {
       console.error('Erro ao carregar agenda do usuário:', error);
@@ -90,77 +77,57 @@ const SearchBar = ({ setEvents, setSelectedUser }) => {
   };
 
   const handleTokenSubmit = async () => {
-    setShowTokenModal(false);
-
-    try {
-      const response = await axios.get(`/user/${selectedUserForToken.id}/agenda`, {
-        params: { token }
-      });
-
-      if (response.data && response.data.message) {
-        console.log('Nenhum evento encontrado:', response.data);
-        setEvents([]);
-        setError(response.data.message);
-      } else {
-        console.log('Eventos carregados:', response.data);
-        setEvents(response.data);
-        setError(null);
-
-        // Armazenar o token no localStorage
-        localStorage.setItem(`agendaAccessToken_${selectedUserForToken.id}`, token);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar agenda do usuário:', error);
-      setError('Erro ao carregar agenda do usuário. Por favor, tente novamente mais tarde.');
+    if (!token || token !== selectedUserForModal.access_code) {
+      setError('Token inválido. Por favor, verifique e tente novamente.');
+      return;
     }
+
+    setShowAccessTokenModal(false);
+    setSelectedUser(selectedUserForModal); // Passa o usuário selecionado somente se o token for válido
+    accessUserAgenda(selectedUserForModal.id, token);
   };
 
   return (
-    <div className="search-bar">
+    <div className="relative">
       <input
         type="text"
-        placeholder="Search events or users..."
+        placeholder="Buscar eventos ou usuários..."
         value={searchTerm}
         onChange={handleSearchChange}
+        className="w-full px-4 py-2 border-2 border-white rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-600 text-white placeholder-white"
       />
-      <ul>
-        {suggestions.map((item, index) => (
-          <li key={index} onClick={() => handleSuggestionClick(item)}>
-            {item.type === 'event' ? item.data.title : item.data.name}
-          </li>
-        ))}
-      </ul>
-      {error && <p className="error-message">{error}</p>}
+      {searchTerm.trim() !== '' && (
+        <ul className="absolute w-full mt-1 bg-white rounded-lg shadow-lg max-h-60 overflow-auto z-50">
+          {suggestions.length > 0 ? (
+            suggestions.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => handleSuggestionClick(item)}
+                className="px-4 py-2 cursor-pointer hover:bg-blue-100"
+              >
+                {item.type === 'event' ? item.data.title : item.data.name}
+              </li>
+            ))
+          ) : (
+            <li className="px-4 py-2">Nenhum resultado encontrado</li>
+          )}
+        </ul>
+      )}
+      {error && <p className="text-red-500 mt-2">{error}</p>}
 
-      {/* Modal para inserir token */}
-      <Modal show={showTokenModal} onHide={() => setShowTokenModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Inserir Token de Acesso</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group controlId="tokenInput">
-            <Form.Label>Token de Acesso</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Insira o token de acesso"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowTokenModal(false)}>
-            Fechar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleTokenSubmit}
-            disabled={!token || token !== selectedUserForToken.access_code}
-          >
-            Confirmar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      <AccessTokenModal
+        isOpen={showAccessTokenModal}
+        onClose={() => setShowAccessTokenModal(false)}
+        onSubmit={handleTokenSubmit}
+        token={token}
+        setToken={setToken}
+      />
+
+      <NoAccessModal
+        isOpen={showNoAccessModal}
+        onClose={() => setShowNoAccessModal(false)}
+        user={selectedUserForModal}
+      />
     </div>
   );
 };

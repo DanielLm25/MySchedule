@@ -126,20 +126,25 @@ export default function Register() {
                             <InputError message={errors.password_confirmation} className="text-lg mt-2" />
                         </div>
 
-                        <div className="flex items-center justify-between mt-6">
-                            <div>
+                        <div className="flex items-center justify-between mt-6 space-x-4">
+                            <div className="flex-grow">
                                 <Link
                                     href={route('login')}
-                                    className="ml-1 text-xl text-blue-500 hover:text-blue-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hover:underline"
+                                    className="text-xl text-blue-500 hover:text-blue-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hover:underline"
                                 >
                                     Already registered?
                                 </Link>
                             </div>
 
-                            <PrimaryButton className="w-30 ml-[125px] bg-blue-600 hover:bg-gradient-to-r hover:from-blue-800 hover:to-blue-800 text-white py-4 rounded-full shadow-lg text-xl flex items-center justify-center transition-all duration-300 ease-in-out transform hover:scale-105" disabled={processing} style={{ fontSize: '1.3rem' }}>
+                            <PrimaryButton
+                                className="bg-blue-600 hover:bg-gradient-to-r hover:from-blue-800 hover:to-blue-800 text-white py-4 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ease-in-out transform hover:scale-105"
+                                disabled={processing}
+                                style={{ fontSize: '1rem' }}
+                            >
                                 {processing ? 'Signing up...' : 'Sign Up'}
                             </PrimaryButton>
                         </div>
+
                     </form>
                 </div>
             </div>

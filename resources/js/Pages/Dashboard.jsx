@@ -10,10 +10,8 @@ const Dashboard = ({ auth }) => {
         <AuthenticatedLayout user={auth.user} showAgenda={true}>
             <Head title="Dashboard" />
 
-            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-8">
-                <div className="">
-                    <NotificationDisplay /> {/* Renderiza o componente de notificação */}
-                </div>
+            <div className="">
+                <NotificationDisplay /> {/* Renderiza o componente de notificação */}
             </div>
         </AuthenticatedLayout>
     );

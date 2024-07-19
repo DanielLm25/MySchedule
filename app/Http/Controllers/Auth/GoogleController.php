@@ -37,6 +37,6 @@ class GoogleController extends Controller
 
             Auth::login($user);
         }
-        return redirect()->intended('agenda');
+        return redirect()->intended('dashboard');
     }
 }

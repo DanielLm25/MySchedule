@@ -8,12 +8,13 @@ import NotificationDisplay from '@/Components/NotificationDisplay';
 import { FaUserCircle, FaAngleDown } from 'react-icons/fa';
 import SearchBar from '../Components/SearchBar';
 import Agenda from '../Pages/Agenda'; // Verifique o caminho correto para Agenda.jsx
+import Footer from '../Components/Footer'; // Importe o componente Footer
 
 export default function AuthenticatedLayout({ user, children, selectedUser, showAgenda }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [events, setEvents] = useState([]); // Estado para armazenar os eventos
     const [selectedUserState, setSelectedUserState] = useState(selectedUser); // Estado local para armazenar o selectedUser
-
+    const isMobile = window.innerWidth < 640; // Ajuste o breakpoint conforme necessário
     // Efeito para atualizar o selectedUserState quando selectedUser mudar
     useEffect(() => {
         setSelectedUserState(selectedUser);
@@ -34,14 +35,14 @@ export default function AuthenticatedLayout({ user, children, selectedUser, show
     }, [selectedUserState, children]);
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400">
             <NotificationDisplay />
             <nav className="bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 shadow-lg">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-[1395px] mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex">
                             <div className="flex-shrink-0 flex items-center">
-                                <Link href="/">
+                                <Link href={isMobile ? route('dashboard') : '/'}>
                                     <FaUserCircle className="block h-9 w-auto fill-current text-white" />
                                 </Link>
                             </div>
@@ -49,17 +50,22 @@ export default function AuthenticatedLayout({ user, children, selectedUser, show
                             <div className="hidden sm:ml-10 sm:flex sm:space-x-8 text-white">
                                 <NavLink
                                     className="text-white text-xl transition duration-300 ease-in-out transform hover:scale-105"
-                                    href={route('agenda')}
-                                    active={route().current('agenda')}
+                                    href={route('dashboard')}
+                                    active={route().current('dashboard')}
                                 >
                                     Agenda
                                 </NavLink>
                             </div>
                         </div>
 
-                        <div className="hidden sm:flex sm:items-center sm:ml-6">
-                            <SearchBar setEvents={setEvents} setSelectedUser={setSelectedUser} />
+                        {/* Container centralizado para a SearchBar */}
+                        <div className="flex-grow flex justify-center">
+                            <div className="w-full max-w-2xl mt-2">
+                                <SearchBar className="w-full" setEvents={setEvents} setSelectedUser={setSelectedUser} />
+                            </div>
+                        </div>
 
+                        <div className="flex items-center space-x-4">
                             <div className="ml-3 relative">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -73,40 +79,15 @@ export default function AuthenticatedLayout({ user, children, selectedUser, show
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content className="bg-white">
-                                        <Dropdown.Link href={route('profile.edit')} className="block px-4 py-2 text-xl text-gray-100 hover:bg-blue-100 hover:text-blue-800">
+                                        <Dropdown.Link href={route('profile.edit')} className="bg-white block px-4 py-2 text-xl text-blue-200 text-gray-100 hover:bg-blue-100 hover:text-blue-800">
                                             Profile
                                         </Dropdown.Link>
-                                        <Dropdown.Link href={route('logout')} method="post" as="button" className="block px-4 py-2 text-xl text-gray-100 hover:bg-blue-100 hover:text-blue-800">
+                                        <Dropdown.Link href={route('logout')} method="post" as="button" className="bg-white block px-4 py-2 text-xl text-blue-200 hover:bg-blue-100 hover:text-blue-800">
                                             Log Out
                                         </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>
                             </div>
-                        </div>
-
-                        <div className="-mr-2 flex items-center sm:hidden">
-                            <button
-                                onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
-                                className="inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-blue-800 focus:outline-none focus:bg-blue-800 focus:text-white transition duration-150 ease-in-out"
-                            >
-                                <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                    {showingNavigationDropdown ? (
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    ) : (
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M4 6h16M4 12h16M4 18h16"
-                                        />
-                                    )}
-                                </svg>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -117,7 +98,10 @@ export default function AuthenticatedLayout({ user, children, selectedUser, show
                     <Agenda auth={{ user }} selectedUser={selectedUserState} setSelectedUser={setSelectedUser} />
                 )}
                 {children}
+                <Footer />
             </main>
+
+            {/* Adicione o Footer aqui */}
         </div>
     );
 }
