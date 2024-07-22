@@ -195,7 +195,7 @@ export default function Modal({
                                             onClick={onClose}
                                             className="w-full sm:w-auto py-2 px-4 rounded-lg bg-white text-blue-800 font-semibold flex items-center justify-center space-x-2 transition-transform transform hover:scale-105 hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hover:shadow-xl"
                                         >
-                                            <span>Cancelar</span>
+                                            <span>Fechar</span>
                                         </SecondaryButton>
                                         <PrimaryButton
                                             type="button"
@@ -300,7 +300,7 @@ export default function Modal({
                                             <SecondaryButton
                                                 type="button"
                                                 onClick={onClose}
-                                                className="w-full sm:w-auto py-2 px-4 rounded-lg bg-white text-blue-800 font-semibold flex items-center justify-center space-x-2 transition-transform transform hover:scale-105 hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hover:shadow-xl hover:text-black"
+                                                className="w-full sm:w-auto py-2 px-4 rounded-lg bg-white text-blue-800 font-semibold flex items-center justify-center space-x-2 transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 hover:shadow-xl hover:text-white"
                                             >
                                                 Cancelar
                                             </SecondaryButton>

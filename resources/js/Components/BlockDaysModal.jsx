@@ -238,7 +238,7 @@ export default function BlockDaysModal({
                   <PrimaryButton type="submit" className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200 focus:outline-none hover:shadow-xl transition duration-300 ease-in-out transform hover:scale-105">
                     <FaUnlock className="mr-2 mb-1" /> Bloquear
                   </PrimaryButton>
-                  <SecondaryButton type="button" onClick={onClose} className="flex items-center bg-blue-600 text-black px-4 py-2 rounded-md transition duration-200 focus:outline-none hover:shadow-xl transition duration-300 ease-in-out transform hover:scale-105">
+                  <SecondaryButton type="button" onClick={onClose} className="flex items-center bg-blue-600 text-black px-4 py-2 rounded-md transition duration-200 focus:outline-none hover:shadow-xl transition duration-300 ease-in-out transform hover:scale-105 hover:text-white">
                     Cancelar
                   </SecondaryButton>
                 </div>

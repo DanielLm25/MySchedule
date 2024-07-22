@@ -7,7 +7,7 @@ import axios from 'axios';
 import Modal from '../Components/Modal';
 import BlockDaysModal from '../Components/BlockDaysModal';
 import BlockedDayModal from '../Components/BlockedDayModal';
-import { FaPlus, FaLock, FaChevronLeft, FaChevronRight, FaCalendarDay } from 'react-icons/fa';
+import { FaPlus, FaLock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 export default function Agenda({ auth, selectedUser }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -25,6 +25,8 @@ export default function Agenda({ auth, selectedUser }) {
 
   const calendarRef = useRef(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState('dayGridMonth');
+
 
   const currentUser = selectedUser || auth.user;
 
@@ -280,7 +282,12 @@ export default function Agenda({ auth, selectedUser }) {
     setIsBlockDaysModalOpen(false);
   };
 
-
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+    if (calendarRef.current) {
+      calendarRef.current.getApi().changeView(view);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400">
@@ -289,7 +296,7 @@ export default function Agenda({ auth, selectedUser }) {
           <div className="text-gray-900 h-full flex flex-col">
             <div className="flex flex-col md:flex-row h-full">
               {/* Sidebar with Buttons */}
-              <div className="flex-shrink-0 w-full md:w-48 p-4 flex flex-col space-y-4 bg-blue-400"> {/* Reduz a largura e o padding */}
+              <div className="flex-shrink-0 w-full md:w-64 p-6 flex flex-col space-y-6 bg-blue-400"> {/* Reduz a largura e o padding */}
                 {error && (
                   <div className="bg-red-100 border border-red-500 text-red-700 px-3 py-1 rounded-lg mb-4"> {/* Ajusta o padding e a margem */}
                     {error}
@@ -301,8 +308,9 @@ export default function Agenda({ auth, selectedUser }) {
                   onClick={handleAddEventClick}
                 >
                   <FaPlus className="mr-2 text-lg" />
-                  Add Event
+                  Adicionar Eventos
                 </button>
+
 
                 {auth.user.id === currentUser?.id && (
                   <button
@@ -310,7 +318,7 @@ export default function Agenda({ auth, selectedUser }) {
                     onClick={openBlockDaysModal}
                   >
                     <FaLock className="mr-2 text-lg" />
-                    Block Days
+                    Bloqueio de Dias
                   </button>
                 )}
               </div>
@@ -318,21 +326,24 @@ export default function Agenda({ auth, selectedUser }) {
               {/* Calendar */}
               <div className="flex-grow p-4 flex flex-col">
                 {/* Calendar Header */}
-                <div className="mb-4 flex justify-between items-center"> {/* Ajusta a margem */}
+                <div className="mb-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4">
                   <button
-                    className="flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform"
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform duration-300 ease-in-out"
                     onClick={() => calendarRef.current.getApi().prev()}
                   >
-                    <FaChevronLeft className="mr-1 text-lg" />
-                    Prev
+                    <FaChevronLeft className="mr-2 text-lg" />
+                    Anterior
                   </button>
+
+
+
 
                   <button
                     className="flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform"
                     onClick={() => calendarRef.current.getApi().today()}
                   >
-                    <FaCalendarDay className="mr-1 text-lg" />
-                    Today
+
+                    Hoje
                   </button>
 
                   <button
@@ -340,21 +351,21 @@ export default function Agenda({ auth, selectedUser }) {
                     onClick={() => calendarRef.current.getApi().next()}
                   >
                     <FaChevronRight className="mr-1 text-lg" />
-                    Next
+                    Próximo
                   </button>
                 </div>
 
                 {/* Display Current Month and Year */}
-                <div className="mb-4 text-center text-xl font-semibold text-gray-800"> {/* Ajusta o tamanho do texto */}
+                <div className="mb-4 text-center text-xl font-semibold text-gray-800">
                   {currentDate.toLocaleString('default', { month: 'long' })} {currentDate.getFullYear()}
                 </div>
 
                 {/* Calendar Component */}
-                <div className="flex-grow overflow-auto"> {/* Ajusta o tamanho do calendário */}
+                <div className="flex-grow overflow-auto p-4">
                   <FullCalendar
                     ref={calendarRef}
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                    initialView="dayGridMonth"
+                    initialView={currentView}
                     headerToolbar={false} // Hide the default header
                     dateClick={handleDateClick}
                     events={events
@@ -394,7 +405,7 @@ export default function Agenda({ auth, selectedUser }) {
 
                       if (blockedDay) {
                         return (
-                          <span className="text-red-600 font-semibold">Blocked</span>
+                          <span className="text-red-600 font-semibold">Bloqueado</span>
                         );
                       } else {
                         return <>{arg.dayNumberText}</>;
@@ -403,6 +414,30 @@ export default function Agenda({ auth, selectedUser }) {
                     eventClick={(info) => handleSelectEvent(info.event)}
                     datesSet={(dateInfo) => handleDateChange(dateInfo.view.currentStart)}
                   />
+                </div>
+                <div className="mb-4 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4">
+
+
+                  <div className="flex space-x-2 sm:space-x-4 ml-3">
+                    <button
+                      className={`flex items-center px-4 py-2 ${currentView === 'dayGridMonth' ? 'bg-blue-700' : 'bg-blue-600'} text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform duration-300 ease-in-out`}
+                      onClick={() => handleViewChange('dayGridMonth')}
+                    >
+                      Mês
+                    </button>
+                    <button
+                      className={`flex items-center px-4 py-2 ${currentView === 'timeGridWeek' ? 'bg-blue-700' : 'bg-blue-600'} text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform duration-300 ease-in-out`}
+                      onClick={() => handleViewChange('timeGridWeek')}
+                    >
+                      Semana
+                    </button>
+                    <button
+                      className={`flex items-center px-4 py-2 ${currentView === 'timeGridDay' ? 'bg-blue-700' : 'bg-blue-600'} text-white rounded-lg shadow-md hover:bg-blue-700 transition-transform duration-300 ease-in-out`}
+                      onClick={() => handleViewChange('timeGridDay')}
+                    >
+                      Dia
+                    </button>
+                  </div>
                 </div>
 
                 {selectedBlockedDay && (
